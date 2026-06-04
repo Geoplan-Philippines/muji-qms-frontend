@@ -25,3 +25,5 @@ server/queue-state.json
 *.njsproj
 *.sln
 *.sw?
+
+.claude/skills/impeccable
