@@ -18,7 +18,7 @@
 
 .display__brand {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: var(--space-4);
   font-size: clamp(1.4rem, 2.4vw, 2.4rem); /* sizes the logo plate */
 }
@@ -29,6 +29,12 @@
   letter-spacing: 0.16em;
   text-transform: uppercase;
   color: var(--ink-soft);
+}
+
+.display__actions {
+  display: flex;
+  align-items: center;
+  gap: clamp(var(--space-4), 2vw, var(--space-8));
 }
 
 .display__clock {
@@ -50,10 +56,47 @@
   color: var(--ink-soft);
 }
 
+/* --- Chime toggle ----------------------------------------------------- */
+.chime-toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--ink-soft);
+  font-size: var(--text-label);
+  font-weight: var(--weight-medium);
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard),
+    background-color var(--dur-fast) var(--ease-standard);
+}
+
+.chime-toggle:hover {
+  color: var(--ink);
+  background-color: var(--surface);
+}
+
+.chime-toggle[aria-pressed="false"] {
+  color: var(--ink-faint);
+  border-color: transparent;
+}
+
+.chime-toggle[aria-pressed="false"]:hover {
+  color: var(--ink-soft);
+  border-color: var(--line);
+  background-color: var(--surface);
+}
+
 /* --- Board ------------------------------------------------------------ */
 .board {
   display: grid;
-  grid-template-columns: 1fr 1px 1fr;
+  /* Ready column is wider — puts visual emphasis on the serve side */
+  grid-template-columns: 1fr 1px 1.5fr;
   min-height: 0;
 }
 
@@ -69,30 +112,11 @@
 }
 
 .col[data-tone="ready"] {
-  background: color-mix(in oklch, var(--muji-red-tint) 55%, var(--canvas));
+  background: color-mix(in oklch, var(--muji-red-tint) 80%, var(--canvas));
 }
 
 .col__head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-3);
   padding-bottom: clamp(var(--space-3), 1.4vw, var(--space-6));
-}
-
-.col__dot {
-  width: 0.7em;
-  height: 0.7em;
-  border-radius: var(--radius-pill);
-  font-size: clamp(1rem, 1.6vw, 1.5rem);
-  flex: none;
-}
-
-.col[data-tone="preparing"] .col__dot {
-  border: 0.16em solid var(--ink-soft); /* hollow ring: non-color cue */
-}
-
-.col[data-tone="ready"] .col__dot {
-  background: var(--muji-red); /* filled: non-color cue */
 }
 
 .col__title {
@@ -105,14 +129,9 @@
 
 .col[data-tone="ready"] .col__title {
   color: var(--muji-red-deep);
-}
-
-.col__count {
-  margin-left: auto;
-  font-size: clamp(0.9rem, 1.3vw, 1.3rem);
-  font-weight: var(--weight-medium);
-  color: var(--ink-soft);
-  font-variant-numeric: tabular-nums;
+  font-size: clamp(1.4rem, 2.4vw, 2.4rem);
+  font-weight: var(--weight-bold);
+  letter-spacing: 0;
 }
 
 .col__grid {
@@ -126,6 +145,7 @@
   overflow: hidden;
 }
 
+/* --- Preparing column grid tracks ------------------------------------ */
 /* Fixed track widths + auto-fit keeps rows centered; fewer numbers = wider
    tracks = bigger digits. The digit size is a share of the track width
    (cqw), so 3 digits always fit with breathing room at any track size. */
@@ -141,6 +161,19 @@
   grid-template-columns: repeat(auto-fit, clamp(6.5rem, 11vw, 11rem));
 }
 
+/* --- Now Serving column grid tracks (larger tracks = bigger numbers) -- */
+.col[data-tone="ready"] .col__grid[data-density="xl"] {
+  grid-template-columns: repeat(auto-fit, clamp(13rem, 21vw, 24rem));
+}
+
+.col[data-tone="ready"] .col__grid[data-density="lg"] {
+  grid-template-columns: repeat(auto-fit, clamp(10rem, 15vw, 18rem));
+}
+
+.col[data-tone="ready"] .col__grid[data-density="md"] {
+  grid-template-columns: repeat(auto-fit, clamp(7.5rem, 11.5vw, 13rem));
+}
+
 .qnum {
   container-type: inline-size;
   display: flex;
@@ -152,7 +185,9 @@
 }
 
 .qnum .tnum {
-  font-size: 46cqw;
+  /* Sized so a 4-digit number fills its track with air; the track widens as a
+     column empties, so fewer orders still read bigger. */
+  font-size: 34cqw;
 }
 
 .qnum[data-tone="ready"] {
@@ -243,6 +278,9 @@
     height: clamp(6rem, 18vh, 9rem);
   }
   .promo__media {
+    display: none;
+  }
+  .chime-toggle__label {
     display: none;
   }
 }

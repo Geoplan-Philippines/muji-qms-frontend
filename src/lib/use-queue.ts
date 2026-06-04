@@ -24,6 +24,9 @@ export interface QueueApi {
   lastError: QueueError | null;
   scan: (raw: string) => void;
   markReady: (value: string) => void;
+  collect: (value: string) => void;
+  clear: () => void;
+  importItems: (items: QueueItem[]) => void;
   undo: () => void;
   clearError: () => void;
 }
@@ -162,8 +165,29 @@ export function useQueue(): QueueApi {
     (value: string) => send({ type: "ready", number: value }),
     [send],
   );
+  const collect = useCallback(
+    (value: string) => send({ type: "collect", number: value }),
+    [send],
+  );
+  const clear = useCallback(() => send({ type: "clear" }), [send]);
+  const importItems = useCallback(
+    (incoming: QueueItem[]) => send({ type: "import", items: incoming }),
+    [send],
+  );
   const undo = useCallback(() => send({ type: "undo" }), [send]);
   const clearError = useCallback(() => setLastError(null), []);
 
-  return { items, status, canUndo, lastError, scan, markReady, undo, clearError };
+  return {
+    items,
+    status,
+    canUndo,
+    lastError,
+    scan,
+    markReady,
+    collect,
+    clear,
+    importItems,
+    undo,
+    clearError,
+  };
 }

@@ -1,0 +1,532 @@
+.table {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  height: 100dvh;
+  background: var(--canvas);
+  overflow: hidden;
+}
+
+.table__main {
+  display: grid;
+  grid-template-columns: 1fr minmax(20rem, 24rem);
+  min-height: 0;
+}
+
+/* --- Preparing pool (hero) -------------------------------------------- */
+.pool {
+  position: relative; /* anchors the confirmation flash */
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: var(--space-6);
+}
+
+.pool__head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  padding-bottom: var(--space-4);
+}
+
+.pool__title {
+  margin: 0;
+  font-size: var(--text-title);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+}
+
+.pool__count {
+  font-size: 1.1rem;
+  font-weight: var(--weight-medium);
+  color: var(--ink-soft);
+}
+
+.pool__hint {
+  margin: 0 0 0 auto;
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+}
+
+.pool__grid {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  align-content: start;
+  gap: var(--space-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pool__grid > li {
+  margin: 0;
+}
+
+.pool__tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  padding: var(--space-3);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  transition:
+    background var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard),
+    transform var(--dur-fast) var(--ease-out-quint);
+}
+
+.pool__tile:hover {
+  background: var(--surface-sunken);
+  border-color: color-mix(in oklch, var(--muji-red) 24%, var(--line));
+}
+
+.pool__tile:active {
+  transform: scale(0.97);
+  background: var(--surface-sunken);
+}
+
+/* Staged for serving: red is "about to act". An inset ring avoids the layout
+   shift a 2px border would cause, and previews the served (red) state. */
+.pool__tile[data-selected="true"] {
+  color: var(--muji-red-deep);
+  background: var(--muji-red-tint);
+  border-color: var(--muji-red);
+  box-shadow: inset 0 0 0 1px var(--muji-red);
+}
+
+.pool__tile[data-selected="true"] .pool__wait {
+  color: var(--muji-red);
+}
+
+.pool__num {
+  /* Reduced so a 4-digit number fits the tile without clipping. */
+  font-size: clamp(1.6rem, 3.6vw, 2.4rem);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+}
+
+.pool__wait {
+  font-size: 0.8125rem;
+  font-weight: var(--weight-medium);
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+.pool__empty {
+  margin: auto;
+  font-size: clamp(1rem, 2vw, 1.5rem);
+  color: var(--ink-faint);
+}
+
+/* --- Manual entry + confirm (the action console) ---------------------- */
+.manual {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  padding: var(--space-6);
+  border-left: 1px solid var(--line);
+}
+
+/* Scrollable region that vertically centers the keypad; the last-action
+   preview is pinned below it. Auto margins center without clipping on
+   overflow (justify-content: center would clip the top on short screens). */
+.manual__body {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  overflow-y: auto;
+}
+
+.manual__inner {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  width: min(22rem, 100%);
+  margin: auto;
+}
+
+.manual__label {
+  margin: 0;
+  text-align: center;
+  font-size: 0.95rem;
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+  transition: color var(--dur-fast) var(--ease-standard);
+}
+
+/* When an order is staged, the prompt steps forward to ask for confirmation. */
+.manual__label[data-pending="true"] {
+  color: var(--ink);
+  font-weight: var(--weight-semibold);
+}
+
+/* --- Collect served orders (under the keypad) ------------------------- */
+.collect {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+
+.collect__label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.collect__count {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-faint);
+  font-weight: var(--weight-medium);
+}
+
+.collect__hint {
+  margin-left: auto;
+  font-size: 0.7rem;
+  font-weight: var(--weight-medium);
+  letter-spacing: normal;
+  text-transform: none;
+  color: var(--ink-faint);
+}
+
+.collect__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.2rem;
+  padding: var(--space-2) var(--space-3);
+  font-size: 1.05rem;
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.chip--ready {
+  color: var(--muji-red);
+  background: color-mix(in oklch, var(--muji-red-tint) 60%, var(--canvas));
+  border-color: color-mix(in oklch, var(--muji-red) 22%, var(--line));
+  font-weight: var(--weight-semibold);
+}
+
+/* Served chips are buttons: tap to clear the order once it's collected. */
+.chip--pickup {
+  gap: var(--space-2);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard),
+    transform var(--dur-fast) var(--ease-out-quint);
+}
+
+.chip--pickup:hover {
+  background: color-mix(in oklch, var(--muji-red-tint) 90%, var(--canvas));
+  border-color: var(--muji-red);
+}
+
+.chip--pickup:active {
+  transform: scale(0.96);
+}
+
+.chip__check {
+  width: 0.85em;
+  height: 0.85em;
+  color: var(--muji-red);
+  flex: none;
+}
+
+/* --- Last action preview (pinned bottom) ------------------------------ */
+.manual__last {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  width: min(22rem, 100%);
+  margin: var(--space-4) auto 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+}
+
+.manual__last-num {
+  color: var(--ink);
+  font-weight: var(--weight-semibold);
+}
+
+.manual__return {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.875rem;
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  transition:
+    background var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard);
+}
+
+.manual__return:hover:not(:disabled) {
+  background: var(--surface-sunken);
+}
+
+.manual__return:disabled {
+  color: var(--ink-faint);
+  cursor: not-allowed;
+}
+
+/* --- Board tools: export / import / clear (pinned bottom) ------------- */
+.manual__tools {
+  display: flex;
+  gap: var(--space-2);
+  width: min(22rem, 100%);
+  margin: var(--space-3) auto 0;
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--line);
+}
+
+.manual__tool {
+  flex: 1;
+  min-height: 2.5rem;
+  padding: var(--space-2);
+  font-size: 0.8125rem;
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  transition:
+    background var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard);
+}
+
+.manual__tool:hover:not(:disabled) {
+  background: var(--surface-sunken);
+}
+
+.manual__tool:disabled {
+  color: var(--ink-faint);
+  cursor: not-allowed;
+}
+
+/* Clear is destructive: hover previews the red, danger state. */
+.manual__tool--danger:hover:not(:disabled) {
+  color: var(--muji-red-deep);
+  background: var(--muji-red-tint);
+  border-color: color-mix(in oklch, var(--muji-red) 40%, var(--line));
+}
+
+/* The file input is driven programmatically by the Import button. */
+.manual__file {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  opacity: 0;
+  border: 0;
+  pointer-events: none;
+}
+
+/* --- Tile confirm dialog ---------------------------------------------- */
+/* Native <dialog>: top layer (no z-index needed), built-in focus trap and
+   Escape. Tapping a tile asks here before serving; the keypad's Serve button
+   is the confirm for typed numbers. */
+.confirm {
+  margin: auto; /* center in the viewport's top layer */
+  width: min(22rem, calc(100vw - var(--space-8)));
+  padding: 0;
+  color: var(--ink);
+  background: var(--canvas);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-ambient);
+}
+
+.confirm__inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-8) var(--space-6) var(--space-6);
+  text-align: center;
+}
+
+.confirm__q {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: var(--weight-medium);
+  color: var(--ink-soft);
+}
+
+.confirm__num {
+  margin: 0;
+  font-size: clamp(3.5rem, 14vw, 5rem);
+  font-weight: var(--weight-semibold);
+  line-height: 1;
+  letter-spacing: -0.01em;
+  color: var(--muji-red); /* about to act = red */
+}
+
+.confirm__note {
+  margin: 0;
+  max-width: 28ch;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  text-wrap: balance;
+}
+
+.confirm__actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+  width: 100%;
+  margin-top: var(--space-2);
+}
+
+.confirm__cancel,
+.confirm__serve {
+  min-height: 3rem;
+  padding: var(--space-3) var(--space-4);
+  font-size: 1rem;
+  font-weight: var(--weight-medium);
+  border-radius: var(--radius-md);
+  transition:
+    background var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard);
+}
+
+.confirm__cancel {
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+}
+
+.confirm__cancel:hover {
+  background: var(--surface-sunken);
+}
+
+.confirm__serve {
+  color: var(--accent-on);
+  background: var(--muji-red);
+  border: 1px solid var(--muji-red);
+  font-weight: var(--weight-semibold);
+}
+
+.confirm__serve:hover {
+  background: var(--muji-red-deep);
+  border-color: var(--muji-red-deep);
+}
+
+/* Entrance / exit: fade + lift, with the backdrop crossfading. */
+.confirm,
+.confirm::backdrop {
+  transition:
+    opacity var(--dur-base) var(--ease-out-quint),
+    transform var(--dur-base) var(--ease-out-quint),
+    overlay var(--dur-base) allow-discrete,
+    display var(--dur-base) allow-discrete;
+}
+
+.confirm {
+  opacity: 0;
+  transform: translateY(8px) scale(0.97);
+}
+
+.confirm[open] {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.confirm::backdrop {
+  opacity: 0;
+  background: oklch(26% 0.006 40 / 0.4);
+}
+
+.confirm[open]::backdrop {
+  opacity: 1;
+}
+
+@starting-style {
+  .confirm[open] {
+    opacity: 0;
+    transform: translateY(8px) scale(0.97);
+  }
+  .confirm[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .confirm,
+  .confirm::backdrop {
+    transition: none;
+  }
+  .confirm {
+    transform: none;
+  }
+}
+
+/* --- Stacked layout (portrait tablet / phone) ------------------------- */
+@media (max-width: 860px) {
+  .table__main {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
+  }
+  .manual {
+    border-left: none;
+    border-top: 1px solid var(--line);
+    padding-block: var(--space-4);
+  }
+}
+
+@media (max-width: 520px) {
+  .pool,
+  .manual {
+    padding: var(--space-4);
+  }
+  .pool__grid {
+    grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr));
+    gap: var(--space-3);
+  }
+  .pool__hint {
+    display: none;
+  }
+}
+
+/* Short viewports: tighten the manual panel rhythm. */
+@media (max-height: 760px) {
+  .manual__inner {
+    gap: var(--space-3);
+  }
+}

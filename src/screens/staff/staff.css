@@ -6,107 +6,13 @@
   overflow: hidden;
 }
 
-/* --- Top bar ---------------------------------------------------------- */
-.staff__bar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-4);
-  padding: var(--space-3) var(--space-6);
-  border-bottom: 1px solid var(--line);
-}
-
-.staff__brand {
-  display: flex;
-  align-items: baseline;
-  gap: var(--space-3);
-  font-size: 1.1rem;
-}
-
-.staff__role {
-  font-size: 0.75rem;
-  font-weight: var(--weight-medium);
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-}
-
-.staff__bar-right {
-  display: flex;
-  align-items: center;
-  gap: var(--space-4);
-}
-
-.conn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  font-size: 0.8125rem;
-  font-weight: var(--weight-medium);
-  color: var(--ink-soft);
-}
-
-.conn__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-pill);
-  background: var(--ink-faint);
-}
-
-.conn[data-status="online"] .conn__dot {
-  background: var(--ink);
-}
-
-.conn[data-status="offline"] .conn__dot,
-.conn[data-status="connecting"] .conn__dot {
-  background: var(--muji-red);
-  animation: conn-pulse 1.1s var(--ease-standard) infinite;
-}
-
-@keyframes conn-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.3;
-  }
-}
-
-.staff__clock {
-  font-size: 1rem;
-  font-weight: var(--weight-medium);
-  color: var(--ink);
-}
-
-.staff__undo {
-  padding: var(--space-2) var(--space-4);
-  font-size: 0.875rem;
-  font-weight: var(--weight-medium);
-  color: var(--ink);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  transition:
-    background var(--dur-fast) var(--ease-standard),
-    color var(--dur-fast) var(--ease-standard);
-}
-
-.staff__undo:hover:not(:disabled) {
-  background: var(--surface-sunken);
-}
-
-.staff__undo:disabled {
-  color: var(--ink-faint);
-  cursor: not-allowed;
-}
-
 /* --- Mode switch ------------------------------------------------------ */
 .staff__modes {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--space-2);
-  padding: var(--space-3) var(--space-6) 0;
+  /* Responsive: shrinks padding at narrow widths so tabs never overflow */
+  padding: var(--space-3) clamp(var(--space-3), 4vw, var(--space-6)) 0;
 }
 
 .staff__mode {
@@ -117,6 +23,11 @@
   background: transparent;
   border: none;
   border-bottom: 2px solid var(--line);
+  /* Prevent text wrap — critical on Zebra handheld (narrow viewport) */
+  white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
   transition:
     color var(--dur-base) var(--ease-standard),
     border-color var(--dur-base) var(--ease-standard);
@@ -125,6 +36,11 @@
 .staff__mode[data-active="true"] {
   color: var(--muji-red-deep);
   border-bottom-color: var(--muji-red);
+}
+
+/* Short labels hidden by default; shown only at very narrow viewports */
+.mode-label--short {
+  display: none;
 }
 
 /* --- Main: stage + queue --------------------------------------------- */
@@ -139,10 +55,14 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  /* No justify-content: center — auto margins on the child center it when
+     there's room and collapse to top-aligned when content overflows, so the
+     top of the keypad never bleeds up into the mode tabs. */
+  justify-content: flex-start;
   gap: var(--space-6);
   padding: var(--space-6);
   min-height: 0;
+  overflow-y: auto;
 }
 
 /* Scan mode */
@@ -153,6 +73,8 @@
   gap: var(--space-3);
   text-align: center;
   color: var(--ink-soft);
+  /* Bulletproof vertical centering that degrades to top-align on overflow */
+  margin-block: auto;
 }
 
 .scan__capture {
@@ -196,6 +118,9 @@
   align-items: center;
   gap: var(--space-5, 20px);
   width: min(22rem, 100%);
+  /* Centers within the stage when there's room; collapses to top-aligned
+     (no upward bleed into the tabs) when the keypad is taller than the row. */
+  margin-block: auto;
 }
 
 .ready__label {
@@ -204,67 +129,6 @@
   font-weight: var(--weight-medium);
   letter-spacing: 0.02em;
   color: var(--ink-soft);
-}
-
-.ready__entry {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: var(--space-3);
-  width: 100%;
-  margin-bottom: var(--space-2);
-}
-
-.ready__digit {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: clamp(3.5rem, 11vh, 5.5rem);
-  font-size: clamp(2rem, 6vh, 3rem);
-  font-weight: var(--weight-semibold);
-  font-variant-numeric: tabular-nums;
-  color: var(--ink);
-  background: var(--surface-sunken);
-  border-radius: var(--radius-md);
-}
-
-.ready__digit[data-empty="true"] {
-  background: var(--surface);
-  border: 1px dashed var(--line);
-}
-
-/* Confirmation / error flash */
-.flash {
-  position: absolute;
-  bottom: var(--space-6);
-  left: 50%;
-  translate: -50% 0;
-  display: inline-flex;
-  align-items: baseline;
-  gap: var(--space-3);
-  padding: var(--space-3) var(--space-6);
-  border-radius: var(--radius-pill);
-  box-shadow: var(--shadow-ambient);
-  white-space: nowrap;
-}
-
-.flash[data-tone="ok"] {
-  background: var(--ink);
-  color: var(--canvas);
-}
-
-.flash[data-tone="error"] {
-  background: var(--muji-red);
-  color: var(--accent-on);
-}
-
-.flash__num {
-  font-size: 1.4rem;
-  font-weight: var(--weight-semibold);
-}
-
-.flash__msg {
-  font-size: 0.95rem;
-  font-weight: var(--weight-medium);
 }
 
 /* --- Live queue side panel ------------------------------------------- */
@@ -326,6 +190,38 @@
   font-weight: var(--weight-semibold);
 }
 
+/* Served chips are buttons: tap to clear the order once it's collected. */
+.chip--pickup {
+  gap: var(--space-2);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard),
+    transform var(--dur-fast) var(--ease-out-quint);
+}
+
+.chip--pickup:hover {
+  background: color-mix(in oklch, var(--muji-red-tint) 90%, var(--canvas));
+  border-color: var(--muji-red);
+}
+
+.chip--pickup:active {
+  transform: scale(0.96);
+}
+
+.chip__check {
+  width: 0.85em;
+  height: 0.85em;
+  color: var(--muji-red);
+  flex: none;
+}
+
+.queue__hint {
+  margin: 0 0 var(--space-3);
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+}
+
 .queue__empty {
   font-size: 0.875rem;
   color: var(--ink-faint);
@@ -348,17 +244,57 @@
     flex: 1;
     min-width: 0;
   }
-  .staff__bar-right {
+}
+
+/* Very narrow screens (≤400px): Zebra handheld, small Android phones */
+@media (max-width: 400px) {
+  .staff__modes {
+    padding-inline: var(--space-2);
+    gap: 0;
+  }
+  .staff__mode {
+    font-size: 0.875rem;
+    padding: var(--space-2) var(--space-2);
+  }
+  /* Tighter stage padding so the keypad has more room */
+  .staff__stage {
+    padding: var(--space-4);
+    gap: var(--space-4);
+  }
+}
+
+/* Ultra-narrow screens (≤280px): swap to short tab labels */
+@media (max-width: 280px) {
+  .mode-label--full {
+    display: none;
+  }
+  .mode-label--short {
+    display: inline;
+  }
+  .staff__mode {
+    font-size: 0.9375rem;
+  }
+}
+
+/* Short viewports (handheld scanners, ~640px tall): the stage content is
+   tall (entry slots + 4-row keypad). Compress the vertical rhythm so it
+   fits the row without scrolling and never crowds the mode tabs. */
+@media (max-height: 760px) {
+  .staff__stage {
+    padding-block: var(--space-3);
+    gap: var(--space-3);
+  }
+  .ready {
     gap: var(--space-3);
   }
 }
 
-@media (max-width: 520px) {
-  .staff__role,
-  .staff__clock {
-    display: none;
+@media (max-height: 600px) {
+  .staff__stage {
+    padding-block: var(--space-2);
+    gap: var(--space-2);
   }
-  .staff__bar {
-    padding-inline: var(--space-4);
+  .ready__label {
+    font-size: 0.875rem;
   }
 }

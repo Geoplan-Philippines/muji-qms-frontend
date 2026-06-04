@@ -43,6 +43,11 @@
   border-color: var(--muji-red);
   font-size: clamp(1.05rem, 2.2vh, 1.4rem);
   font-weight: var(--weight-semibold);
+  /* Prevent label from wrapping inside a narrow grid cell */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-inline: var(--space-2);
 }
 
 .keypad__key--submit:hover {
@@ -56,4 +61,37 @@
   color: var(--ink-faint);
   cursor: not-allowed;
   transform: none;
+}
+
+/* Narrow screens: tighter gap so keys stay at a usable touch size */
+@media (max-width: 400px) {
+  .keypad {
+    gap: var(--space-2);
+  }
+  .keypad__key {
+    min-height: clamp(3rem, 9vh, 5rem);
+    font-size: clamp(1.4rem, 3.2vh, 2rem);
+  }
+  .keypad__key--submit {
+    font-size: clamp(0.875rem, 1.8vh, 1.15rem);
+  }
+}
+
+/* Short viewports: the 4-row keypad is the tallest element on the stage.
+   Shrink the keys so the whole entry + keypad fits without scrolling, while
+   keeping each key above the 44px minimum touch target. */
+@media (max-height: 760px) {
+  .keypad {
+    gap: var(--space-2);
+  }
+  .keypad__key {
+    min-height: clamp(2.75rem, 7.5vh, 3.75rem);
+    font-size: clamp(1.3rem, 3vh, 1.8rem);
+  }
+}
+
+@media (max-height: 600px) {
+  .keypad__key {
+    min-height: clamp(2.75rem, 6.5vh, 3.25rem);
+  }
 }

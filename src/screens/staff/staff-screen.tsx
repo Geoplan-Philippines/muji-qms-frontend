@@ -1,86 +1,44 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { AnimatePresence, motion } from "motion/react";
-import { MujiLogo } from "../../components/muji-logo";
+  import { useCallback, useEffect, useRef, useState } from "react";
+import { StationBar } from "../../components/station-bar";
 import { NumericKeypad } from "../../components/numeric-keypad";
+import { DigitEntry } from "../../components/digit-entry";
+import { Flash } from "../../components/flash";
 import { useClock } from "../../lib/use-clock";
-import { useQueue, type QueueError } from "../../lib/use-queue";
+import { useQueue } from "../../lib/use-queue";
+import { useFlash } from "../../lib/use-flash";
+import { formatQueueError } from "../../lib/queue-errors";
 import { useScanner } from "../../lib/use-scanner";
-import { EASE_OUT_QUINT } from "../../lib/motion";
 import { extractNumber, LAST_DIGITS } from "../../../shared/qms.ts";
 import "./staff.css";
 
 type Mode = "scan" | "ready";
 
-interface Feedback {
-  id: number;
-  tone: "ok" | "error";
-  number: string | null;
-  message: string;
-}
-
-const timeFmt = new Intl.DateTimeFormat("en-GB", {
-  hour: "2-digit",
-  minute: "2-digit",
-});
-
-function errorMessage(e: QueueError): string {
-  const n = e.number ?? "That number";
-  switch (e.error) {
-    case "already_preparing":
-      return `${n} is already preparing`;
-    case "already_ready":
-      return `${n} is already ready`;
-    case "not_found":
-      return `${n} is not in the queue`;
-    case "invalid_scan":
-    case "invalid_number":
-      return "Could not read a number";
-    case "nothing_to_undo":
-      return "Nothing to undo";
-    default:
-      return "Something went wrong";
-  }
-}
-
 export default function StaffScreen() {
-  const { items, status, canUndo, lastError, scan, markReady, undo } = useQueue();
+  const { items, status, canUndo, lastError, scan, markReady, collect, undo } = useQueue();
   const now = useClock(1000);
+  const { feedback, show } = useFlash();
 
   const [mode, setMode] = useState<Mode>("scan");
   const [entry, setEntry] = useState("");
-  const [feedback, setFeedback] = useState<Feedback | null>(null);
-  const feedbackId = useRef(0);
   const scannerCaptureRef = useRef<HTMLInputElement | null>(null);
-
-  const flash = useCallback((tone: Feedback["tone"], number: string | null, message: string) => {
-    feedbackId.current += 1;
-    setFeedback({ id: feedbackId.current, tone, number, message });
-  }, []);
-
-  // Confirmation/error flashes auto-dismiss.
-  useEffect(() => {
-    if (!feedback) return;
-    const id = setTimeout(() => setFeedback((f) => (f?.id === feedback.id ? null : f)), 1700);
-    return () => clearTimeout(id);
-  }, [feedback]);
 
   // Surface server rejections (duplicate scan, unknown number, ...).
   useEffect(() => {
-    if (lastError) flash("error", lastError.number, errorMessage(lastError));
-  }, [lastError, flash]);
+    if (lastError) show("error", lastError.number, formatQueueError(lastError));
+  }, [lastError, show]);
 
   // Scan mode: the Zebra wedge drives input directly.
   const onScan = useCallback(
     (raw: string) => {
       const number = extractNumber(raw);
       if (!number) {
-        flash("error", null, "Could not read a number");
+        show("error", null, "Could not read a number");
         return;
       }
       scan(raw);
-      flash("ok", number, "now preparing");
+      show("ok", number, "now preparing");
     },
-    [scan, flash],
+    [scan, show],
   );
   useScanner(mode === "scan", onScan);
 
@@ -108,9 +66,9 @@ export default function StaffScreen() {
     if (entry.length !== LAST_DIGITS) return;
     const number = entry.padStart(LAST_DIGITS, "0");
     markReady(number);
-    flash("ok", number, "ready to pick up");
+    show("ok", number, "now serving");
     setEntry("");
-  }, [entry, markReady, flash]);
+  }, [entry, markReady, show]);
 
   // Ready mode: accept physical typing alongside the on-screen keypad.
   useEffect(() => {
@@ -135,56 +93,52 @@ export default function StaffScreen() {
     setEntry("");
   };
 
+  // Clear a served order once the customer collects it.
+  const handleCollect = useCallback(
+    (number: string) => {
+      collect(number);
+      show("ok", number, "picked up");
+    },
+    [collect, show],
+  );
+
   const preparing = items.filter((i) => i.status === "preparing");
   const ready = items.filter((i) => i.status === "ready");
-  const digits = entry.padStart(LAST_DIGITS, "·").split("");
 
   return (
     <div className="staff">
-      <header className="staff__bar">
-        <div className="staff__brand">
-          <MujiLogo />
-          <span className="staff__role">Counter</span>
-        </div>
-        <div className="staff__bar-right">
-          <span className="conn" data-status={status}>
-            <span className="conn__dot" aria-hidden="true" />
-            {status === "online" ? "Connected" : "Reconnecting…"}
-          </span>
-          <time className="staff__clock tnum" dateTime={now.toISOString()}>
-            {timeFmt.format(now)}
-          </time>
-          <button
-            type="button"
-            className="staff__undo"
-            onClick={() => undo()}
-            disabled={!canUndo}
-          >
-            Undo last
-          </button>
-        </div>
-      </header>
+      <StationBar
+        role="Counter"
+        status={status}
+        time={now}
+        canUndo={canUndo}
+        onUndo={undo}
+      />
 
       <div className="staff__modes" role="tablist" aria-label="Input mode">
         <button
           type="button"
           role="tab"
           aria-selected={mode === "scan"}
+          aria-label="Scan to prepare"
           className="staff__mode"
           data-active={mode === "scan"}
           onClick={() => switchMode("scan")}
         >
-          Scan to prepare
+          <span className="mode-label--full" aria-hidden="true">Scan to prepare</span>
+          <span className="mode-label--short" aria-hidden="true">Prepare</span>
         </button>
         <button
           type="button"
           role="tab"
           aria-selected={mode === "ready"}
+          aria-label="Mark serving"
           className="staff__mode"
           data-active={mode === "ready"}
           onClick={() => switchMode("ready")}
         >
-          Mark ready
+          <span className="mode-label--full" aria-hidden="true">Mark serving</span>
+          <span className="mode-label--short" aria-hidden="true">Serve</span>
         </button>
       </div>
 
@@ -215,40 +169,18 @@ export default function StaffScreen() {
           ) : (
             <div className="ready">
               <p className="ready__label">Enter the order number</p>
-              <div className="ready__entry" aria-label={`Entry ${entry || "empty"}`}>
-                {digits.map((d, i) => (
-                  <span key={i} className="ready__digit" data-empty={d === "·"}>
-                    {d === "·" ? "" : d}
-                  </span>
-                ))}
-              </div>
+              <DigitEntry value={entry} length={LAST_DIGITS} />
               <NumericKeypad
                 onDigit={(d) => setEntry((prev) => (prev + d).slice(-LAST_DIGITS))}
                 onBackspace={() => setEntry((prev) => prev.slice(0, -1))}
                 onSubmit={submitReady}
-                submitLabel="Mark ready"
+                submitLabel="Serve"
                 canSubmit={entry.length === LAST_DIGITS}
               />
             </div>
           )}
 
-          <AnimatePresence>
-            {feedback && (
-              <motion.div
-                key={feedback.id}
-                className="flash"
-                data-tone={feedback.tone}
-                role="status"
-                initial={{ opacity: 0, y: 10, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -8, scale: 0.98 }}
-                transition={{ duration: 0.28, ease: EASE_OUT_QUINT }}
-              >
-                {feedback.number && <span className="flash__num tnum">{feedback.number}</span>}
-                <span className="flash__msg">{feedback.message}</span>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          <Flash feedback={feedback} />
         </section>
 
         <aside className="queue" aria-label="Live queue">
@@ -267,13 +199,37 @@ export default function StaffScreen() {
           </div>
           <div className="queue__group">
             <h2 className="queue__title">
-              Ready <span className="queue__count">{ready.length}</span>
+              Serving <span className="queue__count">{ready.length}</span>
             </h2>
+            {ready.length > 0 && (
+              <p className="queue__hint">Tap a number when the customer collects it</p>
+            )}
             <ul className="queue__list">
               {ready.length === 0 && <li className="queue__empty">None</li>}
               {ready.map((i) => (
-                <li key={i.number} className="chip chip--ready tnum">
-                  {i.number}
+                <li key={i.number}>
+                  <button
+                    type="button"
+                    className="chip chip--ready chip--pickup"
+                    onClick={() => handleCollect(i.number)}
+                    aria-label={`Mark order ${i.number} picked up`}
+                  >
+                    <span className="tnum">{i.number}</span>
+                    <svg
+                      className="chip__check"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="m3.5 8.5 3 3 6-7"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
                 </li>
               ))}
             </ul>

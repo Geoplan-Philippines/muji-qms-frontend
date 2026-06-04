@@ -4,6 +4,7 @@ import { MotionConfig } from "motion/react";
 
 const DisplayScreen = lazy(() => import("./screens/display/display-screen"));
 const StaffScreen = lazy(() => import("./screens/staff/staff-screen"));
+const TableScreen = lazy(() => import("./screens/table/table-screen"));
 
 function ScreenFallback() {
   return <div className="route-fallback" aria-busy="true" />;
@@ -23,6 +24,14 @@ const router = createBrowserRouter([
     element: (
       <Suspense fallback={<ScreenFallback />}>
         <StaffScreen />
+      </Suspense>
+    ),
+  },
+  {
+    path: "/table",
+    element: (
+      <Suspense fallback={<ScreenFallback />}>
+        <TableScreen />
       </Suspense>
     ),
   },

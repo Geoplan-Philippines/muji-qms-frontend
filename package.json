@@ -4,11 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -n server,web -c red,gray \"bun run server\" \"vite\"",
-    "dev:web": "vite",
+    "dev": "concurrently -n server,web -c red,gray \"bun run server\" \"vite --host\"",
+    "dev:web": "vite --host",
     "server": "node --watch server/qms-server.ts",
     "build": "tsc -b && vite build",
-    "start": "concurrently -n server,web -c red,gray \"bun run server\" \"vite preview --host\"",
+    "start": "bun run build && concurrently -n server,web -c red,gray \"bun run server\" \"vite preview --host\"",
     "lint": "eslint .",
     "preview": "vite preview --host"
   },

@@ -10,11 +10,15 @@
 /** WebSocket port the local sync server listens on. */
 export const WS_PORT = 8787;
 
-/** READY numbers auto-clear from the board this long after being marked ready. */
-export const EXPIRE_MS = 90_000;
+/**
+ * Safety-net auto-clear: a served number drops off the board this long after
+ * being marked served, in case staff forget to clear it. The primary removal
+ * is the explicit "collect" (picked up) action.
+ */
+export const EXPIRE_MS = 300_000;
 
 /** A queue number is the last N digits of a scanned/typed receipt barcode. */
-export const LAST_DIGITS = 3;
+export const LAST_DIGITS = 4;
 
 /** localStorage key the client uses to cache the last snapshot for instant paint. */
 export const STORAGE_KEY = "muji-qms.snapshot.v1";
@@ -22,7 +26,7 @@ export const STORAGE_KEY = "muji-qms.snapshot.v1";
 export type QueueStatus = "preparing" | "ready";
 
 export interface QueueItem {
-  number: string; // zero-padded, LAST_DIGITS wide, e.g. "042"
+  number: string; // zero-padded, LAST_DIGITS wide, e.g. "0042"
   status: QueueStatus;
   since: number; // epoch ms the item entered its current status
 }
@@ -36,6 +40,9 @@ export interface QueueState {
 export type Action =
   | { type: "scan"; raw: string }
   | { type: "ready"; number: string }
+  | { type: "collect"; number: string }
+  | { type: "clear" }
+  | { type: "import"; items: QueueItem[] }
   | { type: "undo" }
   | { type: "expire" };
 
@@ -45,6 +52,7 @@ export type ReduceError =
   | "already_preparing"
   | "already_ready"
   | "not_found"
+  | "not_ready"
   | "nothing_to_undo"
   | "noop"
   | "unknown_action";
@@ -124,6 +132,44 @@ export function reduce(
         i.number === number ? { ...i, status: "ready" as const, since: now } : i,
       );
       return { state: { items, undo: snapshotItems(state), seq: state.seq + 1 }, ok: true, number };
+    }
+
+    case "collect": {
+      const number = extractNumber(action.number);
+      if (!number) return { state, ok: false, error: "invalid_number" };
+      const target = state.items.find((i) => i.number === number);
+      if (!target) return { state, ok: false, error: "not_found", number };
+      // Only a served order can be collected; a preparing one isn't ready yet.
+      if (target.status !== "ready") return { state, ok: false, error: "not_ready", number };
+      const items = state.items.filter((i) => i.number !== number);
+      return { state: { items, undo: snapshotItems(state), seq: state.seq + 1 }, ok: true, number };
+    }
+
+    case "clear": {
+      // Wipe the board in one stroke, but keep it reversible: a snapshot lets
+      // the operator undo an accidental clear from the station bar.
+      if (state.items.length === 0) return { state, ok: false, error: "noop" };
+      return { state: { items: [], undo: snapshotItems(state), seq: state.seq + 1 }, ok: true };
+    }
+
+    case "import": {
+      // Restore a board from an exported file: replace the current items with
+      // the incoming set. Sanitize every row (the file is untrusted input) and
+      // drop blanks and duplicates so the board can't be corrupted.
+      const seen = new Set<string>();
+      const items: QueueItem[] = [];
+      for (const candidate of action.items) {
+        const number = extractNumber(candidate.number);
+        if (!number || seen.has(number)) continue;
+        seen.add(number);
+        const status: QueueStatus = candidate.status === "ready" ? "ready" : "preparing";
+        const since =
+          typeof candidate.since === "number" && Number.isFinite(candidate.since)
+            ? candidate.since
+            : now;
+        items.push({ number, status, since });
+      }
+      return { state: { items, undo: snapshotItems(state), seq: state.seq + 1 }, ok: true };
     }
 
     case "undo": {

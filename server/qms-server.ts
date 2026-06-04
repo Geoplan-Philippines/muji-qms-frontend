@@ -28,7 +28,12 @@ let state: QueueState = load();
 function load(): QueueState {
   try {
     if (existsSync(STATE_FILE)) {
-      const raw = JSON.parse(readFileSync(STATE_FILE, "utf8")) as Partial<QueueState>;
+      const text = readFileSync(STATE_FILE, "utf8").trim();
+      if (text.length === 0) {
+        return makeInitialState();
+      }
+
+      const raw = JSON.parse(text) as Partial<QueueState>;
       return { items: raw.items ?? [], undo: null, seq: raw.seq ?? 0 };
     }
   } catch (err) {

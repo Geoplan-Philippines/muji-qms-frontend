@@ -1,0 +1,38 @@
+.digit-entry {
+  display: grid;
+  grid-template-columns: repeat(var(--slots, 3), 1fr);
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.digit-entry__slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: clamp(3.5rem, 11vh, 5.5rem);
+  font-size: clamp(2rem, 6vh, 3rem);
+  font-weight: var(--weight-semibold);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  background: var(--surface-sunken);
+  border-radius: var(--radius-md);
+}
+
+.digit-entry__slot[data-empty="true"] {
+  background: var(--surface);
+  border: 1px dashed var(--line);
+}
+
+/* Short viewports: shrink the slots so entry + keypad fit without scrolling. */
+@media (max-height: 760px) {
+  .digit-entry__slot {
+    min-height: clamp(2.75rem, 8vh, 4rem);
+    font-size: clamp(1.6rem, 5vh, 2.4rem);
+  }
+}
+
+@media (max-height: 600px) {
+  .digit-entry__slot {
+    min-height: clamp(2.5rem, 7vh, 3.5rem);
+  }
+}
