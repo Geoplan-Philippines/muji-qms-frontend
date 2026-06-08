@@ -1,145 +1,111 @@
-/* ==========================================================================
-   muji-qms — design tokens
-   Queue Management System for a Muji coffeeshop.
-   Canonical token layer. Documented in /DESIGN.md.
-   ========================================================================== */
-
 :root {
-  /* --- Color: brand --------------------------------------------------- */
-  --muji-red: oklch(47% 0.165 21); /* #a3212f, ~Pantone 187C. The single accent. */
-  --muji-red-deep: oklch(41% 0.155 22); /* #8b0f20, hover/active */
-  --muji-red-tint: oklch(95% 0.028 21); /* #ffe8e6, faint wash behind the SERVE column */
+  --text: #6b6375;
+  --text-h: #08060d;
+  --bg: #fff;
+  --border: #e5e4e7;
+  --code-bg: #f4f3ec;
+  --accent: #aa3bff;
+  --accent-bg: rgba(170, 59, 255, 0.1);
+  --accent-border: rgba(170, 59, 255, 0.5);
+  --social-bg: rgba(244, 243, 236, 0.5);
+  --shadow:
+    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
 
-  /* --- Color: ink (text + PREPARING numbers) -------------------------- */
-  --ink: oklch(26% 0.006 40); /* #272322, primary text, preparing numbers */
-  --ink-soft: oklch(47% 0.012 40); /* #615956, secondary labels (AA on canvas) */
-  --ink-faint: oklch(62% 0.012 40); /* #8d8481, large/decorative text only */
+  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
+  --mono: ui-monospace, Consolas, monospace;
 
-  /* --- Color: surfaces (tonal layering, no decorative shadow) ---------- */
-  --canvas: oklch(98.5% 0.0035 40); /* #fcf9f8, the room: every screen base */
-  --surface: oklch(96.5% 0.005 40); /* #f7f2f1, raised panels, keypad */
-  --surface-sunken: oklch(93.5% 0.007 40); /* #eee8e6, input wells */
-  --line: oklch(90% 0.006 40); /* #e2dddb, hairline dividers + borders */
-
-  /* --- Color: roles --------------------------------------------------- */
-  --focus-ring: oklch(47% 0.165 21);
-  --accent-on: oklch(98.5% 0.0035 40); /* text on muji-red */
-
-  /* --- Typography ----------------------------------------------------- */
-  --font-sans: Helvetica, "Helvetica Neue", Arial, system-ui, sans-serif;
-  --font-num: Helvetica, "Helvetica Neue", Arial, system-ui, sans-serif;
-
-  --weight-regular: 400;
-  --weight-medium: 500;
-  --weight-semibold: 600;
-  --weight-bold: 700;
-
-  /* Fixed rem scale for staff UI (product register: no fluid body type) */
-  --text-label: 0.8125rem; /* 13px */
-  --text-body: 1rem; /* 16px */
-  --text-title: 1.5rem; /* 24px */
-  --text-headline: 2rem; /* 32px */
-
-  /* --- Spacing (4px base) --------------------------------------------- */
-  --space-1: 4px;
-  --space-2: 8px;
-  --space-3: 12px;
-  --space-4: 16px;
-  --space-6: 24px;
-  --space-8: 32px;
-  --space-12: 48px;
-  --space-16: 64px;
-  --space-24: 96px;
-
-  /* --- Radius (Muji: honest, gently squared) -------------------------- */
-  --radius-sm: 4px;
-  --radius-md: 8px;
-  --radius-lg: 14px;
-  --radius-pill: 999px;
-
-  /* --- Elevation (flat by default; one ambient lift for transient UI) -- */
-  --shadow-ambient: 0 2px 8px oklch(26% 0.006 40 / 0.06),
-    0 8px 24px oklch(26% 0.006 40 / 0.08);
-
-  /* --- Motion (state, not decoration) --------------------------------- */
-  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
-  --dur-fast: 140ms;
-  --dur-base: 220ms;
-  --dur-slow: 360ms; /* number crossing PREPARING -> SERVE */
-
-  /* --- Z-index (semantic scale) --------------------------------------- */
-  --z-base: 0;
-  --z-sticky: 100;
-  --z-overlay: 200;
-  --z-toast: 300;
-
-  color-scheme: light;
-  font-family: var(--font-sans);
-  font-size: 16px;
-  line-height: 1.5;
-  color: var(--ink);
-  background-color: var(--canvas);
+  font: 18px/145% var(--sans);
+  letter-spacing: 0.18px;
+  color-scheme: light dark;
+  color: var(--text);
+  background: var(--bg);
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
+
+  @media (max-width: 1024px) {
+    font-size: 16px;
+  }
 }
 
-*,
-*::before,
-*::after {
-  box-sizing: border-box;
+@media (prefers-color-scheme: dark) {
+  :root {
+    --text: #9ca3af;
+    --text-h: #f3f4f6;
+    --bg: #16171d;
+    --border: #2e303a;
+    --code-bg: #1f2028;
+    --accent: #c084fc;
+    --accent-bg: rgba(192, 132, 252, 0.15);
+    --accent-border: rgba(192, 132, 252, 0.5);
+    --social-bg: rgba(47, 48, 58, 0.5);
+    --shadow:
+      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
+  }
+
+  #social .button-icon {
+    filter: invert(1) brightness(2);
+  }
 }
 
-html,
-body,
 #root {
-  height: 100%;
+  width: 1126px;
+  max-width: 100%;
+  margin: 0 auto;
+  text-align: center;
+  border-inline: 1px solid var(--border);
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
 }
 
 body {
   margin: 0;
-  background-color: var(--canvas);
-  color: var(--ink);
 }
 
-/* Queue numbers never jitter as digits change */
-.tnum,
-[data-numeric] {
-  font-family: var(--font-num);
-  font-variant-numeric: tabular-nums;
-  font-feature-settings: "tnum" 1;
-  letter-spacing: -0.02em;
+h1,
+h2 {
+  font-family: var(--heading);
+  font-weight: 500;
+  color: var(--text-h);
 }
 
-:where(button) {
-  font: inherit;
-  cursor: pointer;
-}
-
-:where(a) {
-  color: var(--muji-red);
-}
-
-/* Visible, consistent focus across every screen */
-:where(a, button, input, [tabindex]):focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
-  border-radius: var(--radius-sm);
-}
-
-.route-fallback {
-  height: 100dvh;
-  background: var(--canvas);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
+h1 {
+  font-size: 56px;
+  letter-spacing: -1.68px;
+  margin: 32px 0;
+  @media (max-width: 1024px) {
+    font-size: 36px;
+    margin: 20px 0;
   }
+}
+h2 {
+  font-size: 24px;
+  line-height: 118%;
+  letter-spacing: -0.24px;
+  margin: 0 0 8px;
+  @media (max-width: 1024px) {
+    font-size: 20px;
+  }
+}
+p {
+  margin: 0;
+}
+
+code,
+.counter {
+  font-family: var(--mono);
+  display: inline-flex;
+  border-radius: 4px;
+  color: var(--text-h);
+}
+
+code {
+  font-size: 15px;
+  line-height: 135%;
+  padding: 4px 8px;
+  background: var(--code-bg);
 }

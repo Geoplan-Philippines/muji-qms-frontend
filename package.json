@@ -1,37 +1,31 @@
 {
-  "name": "muji-qms",
+  "name": "muji-queing-client",
   "private": true,
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "concurrently -n server,web -c red,gray \"bun run server\" \"vite --host\"",
-    "dev:web": "vite --host",
-    "server": "node --watch server/qms-server.ts",
+    "dev": "vite",
     "build": "tsc -b && vite build",
-    "start": "bun run build && concurrently -n server,web -c red,gray \"bun run server\" \"vite preview --host\"",
     "lint": "eslint .",
-    "preview": "vite preview --host"
+    "preview": "vite preview"
   },
   "dependencies": {
+    "lucide-react": "^1.17.0",
     "motion": "^12.40.0",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
-    "react-router-dom": "^7.16.0",
-    "ws": "^8.21.0"
+    "react-router": "^7.17.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@types/node": "^24.12.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "@types/ws": "^8.18.1",
     "@vitejs/plugin-react": "^6.0.1",
-    "concurrently": "^10.0.3",
     "eslint": "^10.3.0",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
-    "puppeteer-core": "^25.1.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
     "vite": "^8.0.12"

@@ -1,7 +1,0 @@
-.muji-logo {
-  display: block;
-  height: 2.4em; /* scales with the parent header's font-size */
-  width: auto;
-  object-fit: contain;
-  user-select: none;
-}
