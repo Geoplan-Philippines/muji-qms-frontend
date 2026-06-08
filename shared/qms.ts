@@ -23,7 +23,13 @@ export const LAST_DIGITS = 4;
 /** localStorage key the client uses to cache the last snapshot for instant paint. */
 export const STORAGE_KEY = "muji-qms.snapshot.v1";
 
-export type QueueStatus = "preparing" | "ready";
+/**
+ * "holding" = the customer collected part of their order and left the rest to
+ * pick up later (e.g. took the food, coffee still to come). The number stays on
+ * the board until the remainder is collected. Unlike "ready", a held number is
+ * never auto-expired — the customer may return well after the serve window.
+ */
+export type QueueStatus = "preparing" | "ready" | "holding";
 
 export interface QueueItem {
   number: string; // zero-padded, LAST_DIGITS wide, e.g. "0042"
@@ -40,7 +46,10 @@ export interface QueueState {
 export type Action =
   | { type: "scan"; raw: string }
   | { type: "ready"; number: string }
+  | { type: "hold"; number: string }
   | { type: "collect"; number: string }
+  | { type: "unready"; number: string }
+  | { type: "setChime"; on: boolean }
   | { type: "clear" }
   | { type: "import"; items: QueueItem[] }
   | { type: "undo" }
@@ -51,6 +60,7 @@ export type ReduceError =
   | "invalid_number"
   | "already_preparing"
   | "already_ready"
+  | "already_holding"
   | "not_found"
   | "not_ready"
   | "nothing_to_undo"
@@ -70,6 +80,7 @@ export type ServerMessage =
       items: QueueItem[];
       seq: number;
       canUndo: boolean;
+      chimeEnabled: boolean;
       serverTime: number;
     }
   | {
@@ -110,13 +121,13 @@ export function reduce(
       if (!number) return { state, ok: false, error: "invalid_scan" };
       const existing = state.items.find((i) => i.number === number);
       if (existing) {
-        return {
-          state,
-          ok: false,
-          error:
-            existing.status === "preparing" ? "already_preparing" : "already_ready",
-          number,
-        };
+        const error: ReduceError =
+          existing.status === "preparing"
+            ? "already_preparing"
+            : existing.status === "holding"
+              ? "already_holding"
+              : "already_ready";
+        return { state, ok: false, error, number };
       }
       const items = [...state.items, { number, status: "preparing" as const, since: now }];
       return { state: { items, undo: snapshotItems(state), seq: state.seq + 1 }, ok: true, number };
@@ -139,9 +150,28 @@ export function reduce(
       if (!number) return { state, ok: false, error: "invalid_number" };
       const target = state.items.find((i) => i.number === number);
       if (!target) return { state, ok: false, error: "not_found", number };
-      // Only a served order can be collected; a preparing one isn't ready yet.
-      if (target.status !== "ready") return { state, ok: false, error: "not_ready", number };
+      // A served order is collected when picked up; a held order is collected
+      // when its remainder is finally picked up. A still-preparing one isn't
+      // ready for either.
+      if (target.status === "preparing") return { state, ok: false, error: "not_ready", number };
       const items = state.items.filter((i) => i.number !== number);
+      return { state: { items, undo: snapshotItems(state), seq: state.seq + 1 }, ok: true, number };
+    }
+
+    case "hold": {
+      // Partial pickup: the customer took part of the order and left the rest
+      // for later. Move the served number into "holding" so it stays on the
+      // board (and off the auto-expire sweep) until the remainder is collected.
+      const number = extractNumber(action.number);
+      if (!number) return { state, ok: false, error: "invalid_number" };
+      const target = state.items.find((i) => i.number === number);
+      if (!target) return { state, ok: false, error: "not_found", number };
+      if (target.status === "holding") return { state, ok: false, error: "already_holding", number };
+      // Only a served order can be partially picked up.
+      if (target.status !== "ready") return { state, ok: false, error: "not_ready", number };
+      const items = state.items.map((i) =>
+        i.number === number ? { ...i, status: "holding" as const, since: now } : i,
+      );
       return { state: { items, undo: snapshotItems(state), seq: state.seq + 1 }, ok: true, number };
     }
 
@@ -162,7 +192,12 @@ export function reduce(
         const number = extractNumber(candidate.number);
         if (!number || seen.has(number)) continue;
         seen.add(number);
-        const status: QueueStatus = candidate.status === "ready" ? "ready" : "preparing";
+        const status: QueueStatus =
+          candidate.status === "ready"
+            ? "ready"
+            : candidate.status === "holding"
+              ? "holding"
+              : "preparing";
         const since =
           typeof candidate.since === "number" && Number.isFinite(candidate.since)
             ? candidate.since
@@ -170,6 +205,20 @@ export function reduce(
         items.push({ number, status, since });
       }
       return { state: { items, undo: snapshotItems(state), seq: state.seq + 1 }, ok: true };
+    }
+
+    case "unready": {
+      // Send a served order back to preparing (it wasn't actually ready yet).
+      // It re-enters the preparing pool fresh, so `since` resets to now.
+      const number = extractNumber(action.number);
+      if (!number) return { state, ok: false, error: "invalid_number" };
+      const target = state.items.find((i) => i.number === number);
+      if (!target) return { state, ok: false, error: "not_found", number };
+      if (target.status !== "ready") return { state, ok: false, error: "not_ready", number };
+      const items = state.items.map((i) =>
+        i.number === number ? { ...i, status: "preparing" as const, since: now } : i,
+      );
+      return { state: { items, undo: snapshotItems(state), seq: state.seq + 1 }, ok: true, number };
     }
 
     case "undo": {

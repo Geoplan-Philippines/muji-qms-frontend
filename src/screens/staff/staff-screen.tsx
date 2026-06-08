@@ -3,6 +3,7 @@ import { StationBar } from "../../components/station-bar";
 import { NumericKeypad } from "../../components/numeric-keypad";
 import { DigitEntry } from "../../components/digit-entry";
 import { Flash } from "../../components/flash";
+import { PickupChoice } from "../../components/pickup-choice";
 import { useClock } from "../../lib/use-clock";
 import { useQueue } from "../../lib/use-queue";
 import { useFlash } from "../../lib/use-flash";
@@ -14,12 +15,15 @@ import "./staff.css";
 type Mode = "scan" | "ready";
 
 export default function StaffScreen() {
-  const { items, status, canUndo, lastError, scan, markReady, collect, undo } = useQueue();
+  const { items, status, canUndo, lastError, scan, markReady, hold, collect, undo } =
+    useQueue();
   const now = useClock(1000);
   const { feedback, show } = useFlash();
 
   const [mode, setMode] = useState<Mode>("scan");
   const [entry, setEntry] = useState("");
+  // The serving number awaiting a pickup decision (collect all / hold rest).
+  const [choosing, setChoosing] = useState<string | null>(null);
   const scannerCaptureRef = useRef<HTMLInputElement | null>(null);
 
   // Surface server rejections (duplicate scan, unknown number, ...).
@@ -43,7 +47,10 @@ export default function StaffScreen() {
   useScanner(mode === "scan", onScan);
 
   // Zebra paste profiles need a focused text target before the browser emits
-  // the barcode payload.
+  // the barcode payload. Keep the hidden capture reliably focused: a browser
+  // ignores .focus() while its window is inactive (e.g. just after the browser
+  // is reopened), so also reclaim focus when the page is shown again or when it
+  // drifts to nothing — otherwise the first scans after a reopen are lost.
   useEffect(() => {
     if (mode !== "scan") return;
 
@@ -53,12 +60,30 @@ export default function StaffScreen() {
       }, 0);
     };
 
+    const onVisible = () => {
+      if (document.visibilityState === "visible") focusScannerCapture();
+    };
+
+    const onCaptureBlur = (event: FocusEvent) => {
+      const next = event.relatedTarget as HTMLElement | null;
+      // Let focus reach real controls (the mode tabs, undo); only reclaim it
+      // when it would otherwise fall to the body, which is what drops the next
+      // scan. This keeps keyboard navigation working.
+      if (next?.closest("button, a, input, [tabindex]")) return;
+      focusScannerCapture();
+    };
+
+    const input = scannerCaptureRef.current;
     focusScannerCapture();
     window.addEventListener("focus", focusScannerCapture);
     window.addEventListener("pointerup", focusScannerCapture);
+    document.addEventListener("visibilitychange", onVisible);
+    input?.addEventListener("blur", onCaptureBlur);
     return () => {
       window.removeEventListener("focus", focusScannerCapture);
       window.removeEventListener("pointerup", focusScannerCapture);
+      document.removeEventListener("visibilitychange", onVisible);
+      input?.removeEventListener("blur", onCaptureBlur);
     };
   }, [mode]);
 
@@ -93,17 +118,38 @@ export default function StaffScreen() {
     setEntry("");
   };
 
-  // Clear a served order once the customer collects it.
-  const handleCollect = useCallback(
+  // Customer took the whole order: clear the number off the board.
+  const confirmPickedUpAll = useCallback(
     (number: string) => {
       collect(number);
       show("ok", number, "picked up");
+      setChoosing(null);
+    },
+    [collect, show],
+  );
+
+  // Partial pickup: keep the number on the board, holding the remainder.
+  const confirmHoldRemainder = useCallback(
+    (number: string) => {
+      hold(number);
+      show("ok", number, "holding remainder");
+      setChoosing(null);
+    },
+    [hold, show],
+  );
+
+  // Held order's remainder finally collected: clear it off the board.
+  const handleCollectRemainder = useCallback(
+    (number: string) => {
+      collect(number);
+      show("ok", number, "remainder picked up");
     },
     [collect, show],
   );
 
   const preparing = items.filter((i) => i.status === "preparing");
   const ready = items.filter((i) => i.status === "ready");
+  const holding = items.filter((i) => i.status === "holding");
 
   return (
     <div className="staff">
@@ -154,6 +200,7 @@ export default function StaffScreen() {
                 inputMode="none"
                 autoCapitalize="off"
                 autoComplete="off"
+                autoFocus
                 spellCheck={false}
                 aria-label="Scanner capture"
               />
@@ -211,8 +258,45 @@ export default function StaffScreen() {
                   <button
                     type="button"
                     className="chip chip--ready chip--pickup"
-                    onClick={() => handleCollect(i.number)}
-                    aria-label={`Mark order ${i.number} picked up`}
+                    onClick={() => setChoosing(i.number)}
+                    aria-label={`Collect order ${i.number}`}
+                  >
+                    <span className="tnum">{i.number}</span>
+                    <svg
+                      className="chip__check"
+                      viewBox="0 0 16 16"
+                      fill="none"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="m3.5 8.5 3 3 6-7"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="queue__group">
+            <h2 className="queue__title">
+              On Hold <span className="queue__count">{holding.length}</span>
+            </h2>
+            {holding.length > 0 && (
+              <p className="queue__hint">Remainder to collect — tap when picked up</p>
+            )}
+            <ul className="queue__list">
+              {holding.length === 0 && <li className="queue__empty">None</li>}
+              {holding.map((i) => (
+                <li key={i.number}>
+                  <button
+                    type="button"
+                    className="chip chip--hold chip--pickup"
+                    onClick={() => handleCollectRemainder(i.number)}
+                    aria-label={`Order ${i.number} remainder picked up`}
                   >
                     <span className="tnum">{i.number}</span>
                     <svg
@@ -236,6 +320,13 @@ export default function StaffScreen() {
           </div>
         </aside>
       </main>
+
+      <PickupChoice
+        number={choosing}
+        onPickedUpAll={() => choosing && confirmPickedUpAll(choosing)}
+        onHoldRemainder={() => choosing && confirmHoldRemainder(choosing)}
+        onCancel={() => setChoosing(null)}
+      />
     </div>
   );
 }

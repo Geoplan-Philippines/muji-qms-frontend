@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { StationBar } from "../../components/station-bar";
-import { NumericKeypad } from "../../components/numeric-keypad";
-import { DigitEntry } from "../../components/digit-entry";
 import { Flash } from "../../components/flash";
 import { useClock } from "../../lib/use-clock";
 import { useQueue } from "../../lib/use-queue";
@@ -10,13 +8,35 @@ import { useFlash } from "../../lib/use-flash";
 import { formatQueueError } from "../../lib/queue-errors";
 import { itemsToCsv, csvToItems } from "../../lib/queue-csv";
 import { EASE_OUT_QUINT } from "../../lib/motion";
-import { LAST_DIGITS, type QueueItem } from "../../../shared/qms.ts";
+import { type QueueItem } from "../../../shared/qms.ts";
 import "./table.css";
 
 const TILE = { duration: 0.32, ease: EASE_OUT_QUINT };
 
 function byAge(a: QueueItem, b: QueueItem): number {
   return a.since - b.since;
+}
+
+function BellIcon({ muted }: { muted?: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true" focusable="false">
+      <path
+        d="M10 2.5a5.5 5.5 0 0 0-5.5 5.5v3L3 14h14l-1.5-3V8A5.5 5.5 0 0 0 10 2.5z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinejoin="round"
+      />
+      <path
+        d="M8.5 14.5a1.5 1.5 0 0 0 3 0"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+      {muted && (
+        <line x1="3" y1="17" x2="17" y2="3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      )}
+    </svg>
+  );
 }
 
 /** Compact "how long has this been preparing" label for service priority. */
@@ -49,9 +69,24 @@ function ReturnIcon() {
   );
 }
 
+function HoldIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <circle cx="12" cy="12" r="8.5" stroke="currentColor" strokeWidth="1.8" />
+      <path
+        d="M12 7.5V12l3 2"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function CheckIcon() {
   return (
-    <svg className="chip__check" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+    <svg className="serving__check" viewBox="0 0 16 16" fill="none" aria-hidden="true">
       <path
         d="m3.5 8.5 3 3 6-7"
         stroke="currentColor"
@@ -64,17 +99,26 @@ function CheckIcon() {
 }
 
 export default function TableScreen() {
-  const { items, status, canUndo, lastError, markReady, collect, clear, importItems, undo } =
-    useQueue();
+  const {
+    items,
+    status,
+    canUndo,
+    lastError,
+    chimeEnabled,
+    markReady,
+    hold,
+    collect,
+    unready,
+    clear,
+    importItems,
+    setChime,
+    undo,
+  } = useQueue();
   const now = useClock(1000);
   const { feedback, show } = useFlash();
 
-  // Keypad entry. Tile taps go through the confirm dialog instead, so the two
-  // input paths stay independent: keypad commits with Serve, tiles with the
-  // dialog's confirm.
-  const [entry, setEntry] = useState("");
+  // Tile taps go through the confirm dialog before serving.
   const [confirming, setConfirming] = useState<string | null>(null);
-  const [lastServed, setLastServed] = useState<string | null>(null);
   const [clearOpen, setClearOpen] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const clearDialogRef = useRef<HTMLDialogElement>(null);
@@ -89,31 +133,25 @@ export default function TableScreen() {
     () => items.filter((i) => i.status === "ready").sort(byAge),
     [items],
   );
+  const holding = useMemo(
+    () => items.filter((i) => i.status === "holding").sort(byAge),
+    [items],
+  );
 
   // Surface server rejections (unknown number, already serving, ...).
   useEffect(() => {
     if (lastError) show("error", lastError.number, formatQueueError(lastError));
   }, [lastError, show]);
 
-  const pending = entry.length === LAST_DIGITS ? entry.padStart(LAST_DIGITS, "0") : null;
-
   const serve = useCallback(
     (number: string) => {
       markReady(number);
       show("ok", number, "now serving");
-      setLastServed(number);
     },
     [markReady, show],
   );
 
-  // Keypad path: the Serve button (or Enter) commits the typed number.
-  const commitEntry = useCallback(() => {
-    if (!pending) return;
-    serve(pending);
-    setEntry("");
-  }, [pending, serve]);
-
-  // Clear a served order once the customer collects it.
+  // Clear a served order once the customer collects the whole thing.
   const handleCollect = useCallback(
     (number: string) => {
       collect(number);
@@ -122,12 +160,33 @@ export default function TableScreen() {
     [collect, show],
   );
 
-  const handleReturn = useCallback(() => {
-    if (!canUndo || !lastServed) return;
-    undo();
-    show("ok", lastServed, "returned to preparing");
-    setLastServed(null);
-  }, [canUndo, lastServed, undo, show]);
+  // Partial pickup: the customer took part of the order and left the rest.
+  // Move it to the hold area so the number stays until the remainder is collected.
+  const handleHold = useCallback(
+    (number: string) => {
+      hold(number);
+      show("ok", number, "holding remainder");
+    },
+    [hold, show],
+  );
+
+  // Held order's remainder finally collected: clear it off the board.
+  const handleCollectRemainder = useCallback(
+    (number: string) => {
+      collect(number);
+      show("ok", number, "remainder picked up");
+    },
+    [collect, show],
+  );
+
+  // Send a served order back to preparing (served too early / by mistake).
+  const handleReturn = useCallback(
+    (number: string) => {
+      unready(number);
+      show("ok", number, "back to preparing");
+    },
+    [unready, show],
+  );
 
   // Drive the native dialog from the `confirming` number.
   useEffect(() => {
@@ -152,7 +211,6 @@ export default function TableScreen() {
   const confirmClear = useCallback(() => {
     clear();
     show("ok", null, "queue cleared");
-    setLastServed(null);
     clearDialogRef.current?.close();
   }, [clear, show]);
 
@@ -184,7 +242,6 @@ export default function TableScreen() {
           return;
         }
         importItems(parsed);
-        setLastServed(null);
         show("ok", null, `imported ${parsed.length}`);
       } catch {
         show("error", null, "Could not read file");
@@ -193,23 +250,11 @@ export default function TableScreen() {
     [importItems, show],
   );
 
-  // Physical numeric keyboards drive the keypad entry.
-  useEffect(() => {
-    const onKey = (event: KeyboardEvent) => {
-      if (confirming || clearOpen) return; // a dialog owns the keyboard while open
-      const target = event.target as HTMLElement | null;
-      if (target && (target.tagName === "INPUT" || target.isContentEditable)) return;
-      if (/^[0-9]$/.test(event.key)) {
-        setEntry((prev) => (prev + event.key).slice(-LAST_DIGITS));
-      } else if (event.key === "Backspace") {
-        setEntry((prev) => prev.slice(0, -1));
-      } else if (event.key === "Enter") {
-        commitEntry();
-      }
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [commitEntry, confirming, clearOpen]);
+  // The chime plays on the customer display; this only flips the shared setting,
+  // which the server broadcasts to every screen including the TV.
+  const handleChimeToggle = useCallback(() => {
+    setChime(!chimeEnabled);
+  }, [chimeEnabled, setChime]);
 
   const nowMs = now.getTime();
 
@@ -221,6 +266,77 @@ export default function TableScreen() {
         time={now}
         canUndo={canUndo}
         onUndo={undo}
+        actions={
+          <>
+            <button
+              type="button"
+              className="chime-toggle"
+              onClick={handleChimeToggle}
+              aria-label={chimeEnabled ? "Mute serve chime" : "Unmute serve chime"}
+              aria-pressed={chimeEnabled}
+            >
+              <BellIcon muted={!chimeEnabled} />
+              <span className="chime-toggle__label">
+                {chimeEnabled ? "Chime on" : "Chime off"}
+              </span>
+            </button>
+            <div className="tools">
+              <button
+                type="button"
+                className="tools__trigger"
+                popoverTarget="table-tools"
+                aria-haspopup="menu"
+                aria-label="Board tools"
+              >
+                <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor" aria-hidden="true">
+                  <circle cx="4" cy="10" r="1.6" />
+                  <circle cx="10" cy="10" r="1.6" />
+                  <circle cx="16" cy="10" r="1.6" />
+                </svg>
+              </button>
+              <div id="table-tools" popover="auto" className="tools__menu" aria-label="Board tools">
+                <button
+                  type="button"
+                  className="tools__item"
+                  popoverTarget="table-tools"
+                  popoverTargetAction="hide"
+                  onClick={handleExport}
+                  disabled={items.length === 0}
+                >
+                  Export CSV
+                </button>
+                <button
+                  type="button"
+                  className="tools__item"
+                  popoverTarget="table-tools"
+                  popoverTargetAction="hide"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Import CSV
+                </button>
+                <button
+                  type="button"
+                  className="tools__item tools__item--danger"
+                  popoverTarget="table-tools"
+                  popoverTargetAction="hide"
+                  onClick={() => setClearOpen(true)}
+                  disabled={items.length === 0}
+                >
+                  Clear queue
+                </button>
+              </div>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".csv,text/csv"
+                className="tools__file"
+                onChange={handleImportFile}
+                aria-hidden="true"
+                tabIndex={-1}
+              />
+            </div>
+          </>
+        }
       />
 
       <main className="table__main">
@@ -267,97 +383,79 @@ export default function TableScreen() {
           <Flash feedback={feedback} />
         </section>
 
-        <aside className="manual" aria-label="Enter a number">
-          <div className="manual__body">
-            <div className="manual__inner">
-              <p className="manual__label" data-pending={pending !== null} aria-live="polite">
-                {pending ? `Serve order ${pending}?` : "Or enter a number"}
-              </p>
-              <DigitEntry value={entry} length={LAST_DIGITS} />
-              <NumericKeypad
-                onDigit={(d) => setEntry((prev) => (prev + d).slice(-LAST_DIGITS))}
-                onBackspace={() => setEntry((prev) => prev.slice(0, -1))}
-                onSubmit={commitEntry}
-                submitLabel="Serve"
-                canSubmit={pending !== null}
-              />
+        <aside className="status" aria-label="Served and held orders">
+          <div className="status__inner">
+            {ready.length === 0 && holding.length === 0 && (
+              <p className="status__empty">No served or held orders yet</p>
+            )}
 
-              {ready.length > 0 && (
-                <section className="collect" aria-label="Serving">
-                  <p className="collect__label">
-                    Serving <span className="collect__count tnum">{ready.length}</span>
-                    <span className="collect__hint">Tap to collect</span>
-                  </p>
-                  <ul className="collect__list">
-                    {ready.map((i) => (
-                      <li key={i.number}>
-                        <button
-                          type="button"
-                          className="chip chip--ready chip--pickup"
-                          onClick={() => handleCollect(i.number)}
-                          aria-label={`Mark order ${i.number} collected`}
-                        >
-                          <span className="tnum">{i.number}</span>
-                          <CheckIcon />
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                </section>
-              )}
-            </div>
-          </div>
+            {ready.length > 0 && (
+              <section className="serving" aria-label="Serving">
+                <p className="serving__label">
+                  Serving <span className="serving__count tnum">{ready.length}</span>
+                </p>
+                <ul className="serving__list">
+                  {ready.map((i) => (
+                    <li key={i.number} className="serving__item">
+                      <span className="serving__num tnum">{i.number}</span>
+                      <button
+                        type="button"
+                        className="serving__return"
+                        onClick={() => handleReturn(i.number)}
+                        aria-label={`Return order ${i.number} to preparing`}
+                      >
+                        <ReturnIcon />
+                        Return
+                      </button>
+                      <button
+                        type="button"
+                        className="serving__hold"
+                        onClick={() => handleHold(i.number)}
+                        aria-label={`Hold remainder of order ${i.number} for later pickup`}
+                      >
+                        <HoldIcon />
+                        Hold
+                      </button>
+                      <button
+                        type="button"
+                        className="serving__collect"
+                        onClick={() => handleCollect(i.number)}
+                        aria-label={`Mark order ${i.number} fully collected`}
+                      >
+                        <CheckIcon />
+                        Collect
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
 
-          {lastServed && (
-            <div className="manual__last">
-              <span className="manual__last-text">
-                Served <span className="manual__last-num tnum">{lastServed}</span>
-              </span>
-              <button
-                type="button"
-                className="manual__return"
-                onClick={handleReturn}
-                disabled={!canUndo}
-              >
-                <ReturnIcon />
-                Return
-              </button>
-            </div>
-          )}
-
-          <div className="manual__tools">
-            <button
-              type="button"
-              className="manual__tool"
-              onClick={handleExport}
-              disabled={items.length === 0}
-            >
-              Export
-            </button>
-            <button
-              type="button"
-              className="manual__tool"
-              onClick={() => fileInputRef.current?.click()}
-            >
-              Import
-            </button>
-            <button
-              type="button"
-              className="manual__tool manual__tool--danger"
-              onClick={() => setClearOpen(true)}
-              disabled={items.length === 0}
-            >
-              Clear
-            </button>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".csv,text/csv"
-              className="manual__file"
-              onChange={handleImportFile}
-              aria-hidden="true"
-              tabIndex={-1}
-            />
+            {holding.length > 0 && (
+              <section className="holding" aria-label="On hold">
+                <p className="holding__label">
+                  Orders with back-order  <span className="holding__count tnum">{holding.length}</span>
+                </p>
+                <p className="holding__hint">Remainder to collect later</p>
+                <ul className="holding__list">
+                  {holding.map((i) => (
+                    <li key={i.number} className="holding__item">
+                      <span className="holding__num tnum">{i.number}</span>
+                      <span className="holding__wait">{waitLabel(i.since, nowMs)}</span>
+                      <button
+                        type="button"
+                        className="holding__collect"
+                        onClick={() => handleCollectRemainder(i.number)}
+                        aria-label={`Order ${i.number} remainder picked up`}
+                      >
+                        <CheckIcon />
+                        Collect
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
           </div>
         </aside>
       </main>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import { MujiLogo } from "../../components/muji-logo";
 import { useClock } from "../../lib/use-clock";
@@ -9,7 +9,6 @@ import "./display.css";
 
 const MOVE = { duration: 0.5, ease: EASE_OUT_QUINT };
 const ENTER = { duration: 0.4, ease: EASE_OUT_QUINT };
-const CHIME_KEY = "qms-chime";
 
 const timeFmt = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" });
 const dateFmt = new Intl.DateTimeFormat("en-GB", {
@@ -31,6 +30,12 @@ function preparingDensity(count: number): "xl" | "lg" | "md" {
 function readyDensity(count: number): "xl" | "lg" | "md" {
   if (count <= 3) return "xl";
   if (count <= 6) return "lg";
+  return "md";
+}
+
+function holdingDensity(count: number): "xl" | "lg" | "md" {
+  if (count <= 4) return "xl";
+  if (count <= 8) return "lg";
   return "md";
 }
 
@@ -56,55 +61,20 @@ function playChime(ctx: AudioContext): void {
   });
 }
 
-function BellIcon({ muted }: { muted?: boolean }) {
-  return (
-    <svg
-      width="16"
-      height="16"
-      viewBox="0 0 20 20"
-      fill="none"
-      aria-hidden="true"
-      focusable="false"
-    >
-      <path
-        d="M10 2.5a5.5 5.5 0 0 0-5.5 5.5v3L3 14h14l-1.5-3V8A5.5 5.5 0 0 0 10 2.5z"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinejoin="round"
-      />
-      <path
-        d="M8.5 14.5a1.5 1.5 0 0 0 3 0"
-        stroke="currentColor"
-        strokeWidth="1.5"
-        strokeLinecap="round"
-      />
-      {muted && (
-        <line
-          x1="3"
-          y1="17"
-          x2="17"
-          y2="3"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-      )}
-    </svg>
-  );
-}
-
 function Column(props: {
   title: string;
   tone: QueueStatus;
   items: QueueItem[];
   empty: string;
   densityFn: (count: number) => "xl" | "lg" | "md";
+  note?: string;
 }) {
-  const { title, tone, items, empty, densityFn } = props;
+  const { title, tone, items, empty, densityFn, note } = props;
   return (
     <section className="col" data-tone={tone} aria-label={title}>
       <header className="col__head">
         <h2 className="col__title">{title}</h2>
+        {note && <p className="col__note">{note}</p>}
       </header>
       <div className="col__grid" data-density={densityFn(items.length)}>
         <AnimatePresence mode="popLayout" initial={false}>
@@ -131,7 +101,7 @@ function Column(props: {
 }
 
 export default function DisplayScreen() {
-  const { items, status } = useQueue();
+  const { items, status, chimeEnabled } = useQueue();
   const now = useClock(1000);
 
   const preparing = useMemo(
@@ -142,14 +112,10 @@ export default function DisplayScreen() {
     () => items.filter((i) => i.status === "ready").sort(byAge),
     [items],
   );
-
-  const [chimeEnabled, setChimeEnabled] = useState(() => {
-    try {
-      return localStorage.getItem(CHIME_KEY) !== "off";
-    } catch {
-      return true;
-    }
-  });
+  const holding = useMemo(
+    () => items.filter((i) => i.status === "holding").sort(byAge),
+    [items],
+  );
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const prevReadyRef = useRef<Set<string> | null>(null);
@@ -170,31 +136,26 @@ export default function DisplayScreen() {
     }
   }, []);
 
-  const handleChimeToggle = useCallback(() => {
-    const next = !chimeEnabled;
-    setChimeEnabled(next);
-    try {
-      localStorage.setItem(CHIME_KEY, next ? "on" : "off");
-    } catch {
-      /* storage unavailable */
-    }
-    if (next) {
-      // Unlock AudioContext on user gesture and preview the chime
+  // Browsers gate audio behind a user gesture. The toggle used to provide it,
+  // but it now lives on a different screen, so unlock on the first interaction
+  // with the display itself (a setup tap). On a no-input wall TV, the browser
+  // must be launched with autoplay allowed instead — see the kiosk note.
+  useEffect(() => {
+    const unlock = () => {
       try {
-        if (!audioCtxRef.current) {
-          audioCtxRef.current = new AudioContext();
-        }
-        const ctx = audioCtxRef.current;
-        if (ctx.state === "suspended") {
-          void ctx.resume().then(() => playChime(ctx));
-        } else {
-          playChime(ctx);
-        }
+        if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
+        void audioCtxRef.current.resume();
       } catch {
         /* AudioContext unavailable */
       }
-    }
-  }, [chimeEnabled]);
+    };
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, []);
 
   useEffect(() => {
     const currentIds = new Set(ready.map((i) => i.number));
@@ -214,29 +175,15 @@ export default function DisplayScreen() {
           <MujiLogo />
           <span className="display__sub">Order status</span>
         </div>
-        <div className="display__actions">
-          <button
-            type="button"
-            className="chime-toggle"
-            onClick={handleChimeToggle}
-            aria-label={chimeEnabled ? "Mute serve chime" : "Unmute serve chime"}
-            aria-pressed={chimeEnabled}
-          >
-            <BellIcon muted={!chimeEnabled} />
-            <span className="chime-toggle__label">
-              {chimeEnabled ? "Chime on" : "Chime off"}
-            </span>
-          </button>
-          <div className="display__clock">
-            <time className="tnum" dateTime={now.toISOString()}>
-              {timeFmt.format(now)}
-            </time>
-            <span className="display__date">{dateFmt.format(now)}</span>
-          </div>
+        <div className="display__clock">
+          <time className="tnum" dateTime={now.toISOString()}>
+            {timeFmt.format(now)}
+          </time>
+          <span className="display__date">{dateFmt.format(now)}</span>
         </div>
       </header>
 
-      <main className="board">
+      <main className="board" data-cols={holding.length > 0 ? "2" : "2"}>
         <LayoutGroup>
           <Column
             title="Preparing"

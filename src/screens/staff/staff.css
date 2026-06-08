@@ -190,6 +190,26 @@
   font-weight: var(--weight-semibold);
 }
 
+/* Held chips: a partially-collected order waiting on its remainder. Neutral
+   ink tone keeps it distinct from the red serving chips, with a dashed border
+   reading as "open/pending". */
+.chip--hold {
+  color: var(--ink);
+  background: var(--surface);
+  border-style: dashed;
+  border-color: var(--ink-faint);
+  font-weight: var(--weight-semibold);
+}
+
+.chip--hold .chip__check {
+  color: var(--ink-soft);
+}
+
+.chip--hold.chip--pickup:hover {
+  background: var(--surface-sunken);
+  border-color: var(--ink-soft);
+}
+
 /* Served chips are buttons: tap to clear the order once it's collected. */
 .chip--pickup {
   gap: var(--space-2);

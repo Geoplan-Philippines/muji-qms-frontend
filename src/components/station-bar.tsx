@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { MujiLogo } from "./muji-logo";
 import type { ConnectionStatus } from "../lib/use-queue";
 import "./station-bar.css";
@@ -14,6 +15,8 @@ interface StationBarProps {
   time: Date;
   canUndo: boolean;
   onUndo: () => void;
+  /** Optional station-specific controls, rendered before the undo button. */
+  actions?: ReactNode;
 }
 
 /**
@@ -21,7 +24,7 @@ interface StationBarProps {
  * connection status, clock, and one-level undo. Identical chrome across
  * stations keeps the operator's mental model constant screen to screen.
  */
-export function StationBar({ role, status, time, canUndo, onUndo }: StationBarProps) {
+export function StationBar({ role, status, time, canUndo, onUndo, actions }: StationBarProps) {
   return (
     <header className="station-bar">
       <div className="station-bar__brand">
@@ -38,6 +41,7 @@ export function StationBar({ role, status, time, canUndo, onUndo }: StationBarPr
         <time className="station-bar__clock tnum" dateTime={time.toISOString()}>
           {timeFmt.format(time)}
         </time>
+        {actions}
         <button
           type="button"
           className="station-bar__undo"

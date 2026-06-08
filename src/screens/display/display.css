@@ -31,12 +31,6 @@
   color: var(--ink-soft);
 }
 
-.display__actions {
-  display: flex;
-  align-items: center;
-  gap: clamp(var(--space-4), 2vw, var(--space-8));
-}
-
 .display__clock {
   display: flex;
   flex-direction: column;
@@ -56,48 +50,21 @@
   color: var(--ink-soft);
 }
 
-/* --- Chime toggle ----------------------------------------------------- */
-.chime-toggle {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-md);
-  background: transparent;
-  color: var(--ink-soft);
-  font-size: var(--text-label);
-  font-weight: var(--weight-medium);
-  white-space: nowrap;
-  cursor: pointer;
-  transition:
-    color var(--dur-fast) var(--ease-standard),
-    border-color var(--dur-fast) var(--ease-standard),
-    background-color var(--dur-fast) var(--ease-standard);
-}
-
-.chime-toggle:hover {
-  color: var(--ink);
-  background-color: var(--surface);
-}
-
-.chime-toggle[aria-pressed="false"] {
-  color: var(--ink-faint);
-  border-color: transparent;
-}
-
-.chime-toggle[aria-pressed="false"]:hover {
-  color: var(--ink-soft);
-  border-color: var(--line);
-  background-color: var(--surface);
-}
-
 /* --- Board ------------------------------------------------------------ */
 .board {
   display: grid;
-  /* Ready column is wider — puts visual emphasis on the serve side */
-  grid-template-columns: 1fr 1px 1.5fr;
   min-height: 0;
+}
+
+/* Two columns (default): Now Serving is wider — emphasis on the serve side. */
+.board[data-cols="2"] {
+  grid-template-columns: 1fr 1px 1.5fr;
+}
+
+/* Three columns: at least one held order, so a narrower reference column for
+   the remainder joins on the right without crowding the serve side. */
+.board[data-cols="3"] {
+  grid-template-columns: 1fr 1px 1.5fr 1px 0.85fr;
 }
 
 .board__divide {
@@ -121,7 +88,7 @@
 
 .col__title {
   margin: 0;
-  font-size: clamp(1.1rem, 1.8vw, 1.8rem);
+  font-size: clamp(1.4rem, 2.6vw, 3rem);
   font-weight: var(--weight-semibold);
   letter-spacing: 0.02em;
   color: var(--ink);
@@ -129,9 +96,27 @@
 
 .col[data-tone="ready"] .col__title {
   color: var(--muji-red-deep);
-  font-size: clamp(1.4rem, 2.4vw, 2.4rem);
+  font-size: clamp(1.8rem, 3.6vw, 4.25rem);
   font-weight: var(--weight-bold);
   letter-spacing: 0;
+}
+
+/* Hold column: a calm, neutral reference area distinct from the red serve side. */
+.col[data-tone="holding"] {
+  background: var(--surface);
+}
+
+.col[data-tone="holding"] .col__title {
+  color: var(--ink);
+}
+
+.col__note {
+  margin: var(--space-1) 0 0;
+  font-size: clamp(0.7rem, 1vw, 1.1rem);
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-faint);
 }
 
 .col__grid {
@@ -174,6 +159,19 @@
   grid-template-columns: repeat(auto-fit, clamp(7.5rem, 11.5vw, 13rem));
 }
 
+/* --- On Hold column grid tracks (compact reference list) ------------- */
+.col[data-tone="holding"] .col__grid[data-density="xl"] {
+  grid-template-columns: repeat(auto-fit, clamp(8rem, 14vw, 14rem));
+}
+
+.col[data-tone="holding"] .col__grid[data-density="lg"] {
+  grid-template-columns: repeat(auto-fit, clamp(6.5rem, 10vw, 11rem));
+}
+
+.col[data-tone="holding"] .col__grid[data-density="md"] {
+  grid-template-columns: repeat(auto-fit, clamp(5.5rem, 8vw, 9rem));
+}
+
 .qnum {
   container-type: inline-size;
   display: flex;
@@ -193,6 +191,10 @@
 .qnum[data-tone="ready"] {
   color: var(--muji-red);
   font-weight: var(--weight-semibold);
+}
+
+.qnum[data-tone="holding"] {
+  color: var(--ink-soft);
 }
 
 .col__empty {
@@ -263,12 +265,42 @@
   box-shadow: var(--shadow-ambient);
 }
 
+/* --- Large signage (40"+ wall displays) ------------------------------- */
+/* 40"+ TVs run at FHD (~1920px) or 4K (~3840px). The fluid clamp on the
+   titles caps out below their physical width, so step the headers up at the
+   common signage resolutions to keep "Preparing" / "Now Serving" readable
+   across a room. */
+@media (min-width: 1920px) {
+  .col__title {
+    font-size: 3.5rem;
+  }
+  .col[data-tone="ready"] .col__title {
+    font-size: 5rem;
+  }
+}
+
+@media (min-width: 2560px) {
+  .col__title {
+    font-size: 4.5rem;
+  }
+  .col[data-tone="ready"] .col__title {
+    font-size: 6.5rem;
+  }
+}
+
 @media (max-width: 720px) {
+  /* Stack the columns vertically. Flex (rather than a fixed grid template)
+     adapts cleanly whether the hold column is present or not. */
   .board {
-    grid-template-columns: 1fr;
-    grid-template-rows: 1fr 1px 1fr;
+    display: flex;
+    flex-direction: column;
+  }
+  .col {
+    flex: 1;
+    min-height: 0;
   }
   .board__divide {
+    flex: none;
     width: auto;
     height: 1px;
   }
@@ -278,9 +310,6 @@
     height: clamp(6rem, 18vh, 9rem);
   }
   .promo__media {
-    display: none;
-  }
-  .chime-toggle__label {
     display: none;
   }
 }

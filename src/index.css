@@ -26,8 +26,8 @@
   --accent-on: oklch(98.5% 0.0035 40); /* text on muji-red */
 
   /* --- Typography ----------------------------------------------------- */
-  --font-sans: "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
-  --font-num: "Helvetica Neue", Helvetica, Arial, system-ui, sans-serif;
+  --font-sans: Helvetica, "Helvetica Neue", Arial, system-ui, sans-serif;
+  --font-num: Helvetica, "Helvetica Neue", Arial, system-ui, sans-serif;
 
   --weight-regular: 400;
   --weight-medium: 500;

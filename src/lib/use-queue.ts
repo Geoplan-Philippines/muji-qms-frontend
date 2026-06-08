@@ -21,12 +21,16 @@ export interface QueueApi {
   items: QueueItem[];
   status: ConnectionStatus;
   canUndo: boolean;
+  chimeEnabled: boolean;
   lastError: QueueError | null;
   scan: (raw: string) => void;
   markReady: (value: string) => void;
+  hold: (value: string) => void;
   collect: (value: string) => void;
+  unready: (value: string) => void;
   clear: () => void;
   importItems: (items: QueueItem[]) => void;
+  setChime: (on: boolean) => void;
   undo: () => void;
   clearError: () => void;
 }
@@ -60,6 +64,7 @@ export function useQueue(): QueueApi {
   const [items, setItems] = useState<QueueItem[]>(loadCache);
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
   const [canUndo, setCanUndo] = useState(false);
+  const [chimeEnabled, setChimeEnabled] = useState(true);
   const [lastError, setLastError] = useState<QueueError | null>(null);
 
   const socketRef = useRef<WebSocket | null>(null);
@@ -113,6 +118,7 @@ export function useQueue(): QueueApi {
           lastSeqRef.current = message.seq;
           setItems(message.items);
           setCanUndo(message.canUndo);
+          setChimeEnabled(message.chimeEnabled);
           try {
             window.localStorage.setItem(
               STORAGE_KEY,
@@ -165,8 +171,16 @@ export function useQueue(): QueueApi {
     (value: string) => send({ type: "ready", number: value }),
     [send],
   );
+  const hold = useCallback(
+    (value: string) => send({ type: "hold", number: value }),
+    [send],
+  );
   const collect = useCallback(
     (value: string) => send({ type: "collect", number: value }),
+    [send],
+  );
+  const unready = useCallback(
+    (value: string) => send({ type: "unready", number: value }),
     [send],
   );
   const clear = useCallback(() => send({ type: "clear" }), [send]);
@@ -174,6 +188,7 @@ export function useQueue(): QueueApi {
     (incoming: QueueItem[]) => send({ type: "import", items: incoming }),
     [send],
   );
+  const setChime = useCallback((on: boolean) => send({ type: "setChime", on }), [send]);
   const undo = useCallback(() => send({ type: "undo" }), [send]);
   const clearError = useCallback(() => setLastError(null), []);
 
@@ -181,12 +196,16 @@ export function useQueue(): QueueApi {
     items,
     status,
     canUndo,
+    chimeEnabled,
     lastError,
     scan,
     markReady,
+    hold,
     collect,
+    unready,
     clear,
     importItems,
+    setChime,
     undo,
     clearError,
   };

@@ -8,7 +8,7 @@
  * strips the types natively).
  */
 import { WebSocketServer, type WebSocket } from "ws";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
@@ -23,28 +23,41 @@ import {
 const HERE = dirname(fileURLToPath(import.meta.url));
 const STATE_FILE = join(HERE, "queue-state.json");
 
-let state: QueueState = load();
+let state: QueueState = makeInitialState();
+// Shop-wide chime preference, controlled from a staff station and broadcast to
+// the customer display (which actually plays the sound). Lives alongside the
+// queue but outside QueueState, so undo/clear never touch it.
+let chimeEnabled = true;
+load();
 
-function load(): QueueState {
+function load(): void {
   try {
     if (existsSync(STATE_FILE)) {
       const text = readFileSync(STATE_FILE, "utf8").trim();
-      if (text.length === 0) {
-        return makeInitialState();
-      }
+      if (text.length === 0) return;
 
-      const raw = JSON.parse(text) as Partial<QueueState>;
-      return { items: raw.items ?? [], undo: null, seq: raw.seq ?? 0 };
+      const raw = JSON.parse(text) as Partial<QueueState> & { chimeEnabled?: boolean };
+      state = { items: raw.items ?? [], undo: null, seq: raw.seq ?? 0 };
+      chimeEnabled = raw.chimeEnabled !== false; // default on
     }
   } catch (err) {
     console.error("[qms] could not read saved state, starting fresh:", err);
   }
-  return makeInitialState();
 }
 
 function persist(): void {
   try {
-    writeFileSync(STATE_FILE, JSON.stringify({ items: state.items, seq: state.seq }, null, 2));
+    // Write to a sibling temp file and atomically rename it over the real one.
+    // writeFileSync truncates before writing, so a crash (or `node --watch`
+    // killing the process mid-save) could otherwise leave a 0-byte state file
+    // and wipe the whole board on the next start. rename is atomic, so the
+    // canonical file is only ever the previous good snapshot or the new one.
+    const tmp = `${STATE_FILE}.tmp`;
+    writeFileSync(
+      tmp,
+      JSON.stringify({ items: state.items, seq: state.seq, chimeEnabled }, null, 2),
+    );
+    renameSync(tmp, STATE_FILE);
   } catch (err) {
     console.error("[qms] could not persist state:", err);
   }
@@ -56,6 +69,7 @@ function snapshot(): string {
     items: state.items,
     seq: state.seq,
     canUndo: state.undo !== null,
+    chimeEnabled,
     serverTime: Date.now(),
   };
   return JSON.stringify(message);
@@ -78,6 +92,15 @@ wss.on("connection", (ws: WebSocket) => {
     try {
       action = JSON.parse(data.toString()) as Action;
     } catch {
+      return;
+    }
+
+    // The chime preference lives outside the reduced queue state, so handle it
+    // here rather than in the pure reducer.
+    if (action.type === "setChime") {
+      chimeEnabled = action.on;
+      persist();
+      broadcast();
       return;
     }
 

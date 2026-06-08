@@ -11,6 +11,8 @@ export function formatQueueError(e: QueueError): string {
       return `${n} is already preparing`;
     case "already_ready":
       return `${n} is already serving`;
+    case "already_holding":
+      return `${n} is already on hold`;
     case "not_found":
       return `${n} is not in the queue`;
     case "not_ready":
