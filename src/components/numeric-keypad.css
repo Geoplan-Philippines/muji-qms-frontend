@@ -1,0 +1,92 @@
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+  width: 100%;
+}
+
+.keypad__key {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: clamp(3.5rem, 9vh, 5.5rem);
+  padding: 0;
+  font-size: clamp(1.5rem, 3.4vh, 2.2rem);
+  font-weight: var(--weight-medium);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  transition:
+    background var(--dur-fast) var(--ease-standard),
+    transform var(--dur-fast) var(--ease-out-quint),
+    border-color var(--dur-fast) var(--ease-standard);
+}
+
+.keypad__key:hover {
+  background: var(--surface-sunken);
+}
+
+.keypad__key:active {
+  transform: scale(0.97);
+  background: var(--surface-sunken);
+}
+
+.keypad__key--util {
+  color: var(--ink-soft);
+}
+
+.keypad__key--submit {
+  color: var(--accent-on);
+  background: var(--muji-red);
+  border-color: var(--muji-red);
+  font-size: clamp(1.05rem, 2.2vh, 1.4rem);
+  font-weight: var(--weight-semibold);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding-inline: var(--space-2);
+}
+
+.keypad__key--submit:hover {
+  background: var(--muji-red-deep);
+  border-color: var(--muji-red-deep);
+}
+
+.keypad__key--submit:disabled {
+  background: var(--surface-sunken);
+  border-color: var(--line);
+  color: var(--ink-faint);
+  cursor: not-allowed;
+  transform: none;
+}
+
+@media (max-width: 400px) {
+  .keypad {
+    gap: var(--space-2);
+  }
+  .keypad__key {
+    min-height: clamp(3rem, 9vh, 5rem);
+    font-size: clamp(1.4rem, 3.2vh, 2rem);
+  }
+  .keypad__key--submit {
+    font-size: clamp(0.875rem, 1.8vh, 1.15rem);
+  }
+}
+
+@media (max-height: 760px) {
+  .keypad {
+    gap: var(--space-2);
+  }
+  .keypad__key {
+    min-height: clamp(2.75rem, 7.5vh, 3.75rem);
+    font-size: clamp(1.3rem, 3vh, 1.8rem);
+  }
+}
+
+@media (max-height: 600px) {
+  .keypad__key {
+    min-height: clamp(2.75rem, 6.5vh, 3.25rem);
+  }
+}

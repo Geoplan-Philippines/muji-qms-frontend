@@ -1,0 +1,299 @@
+.staff {
+  display: grid;
+  grid-template-rows: auto auto 1fr;
+  height: 100dvh;
+  background: var(--canvas);
+  overflow: hidden;
+}
+
+/* --- Mode switch ------------------------------------------------------ */
+.staff__modes {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  padding: var(--space-3) clamp(var(--space-3), 4vw, var(--space-6)) 0;
+}
+
+.staff__mode {
+  padding: var(--space-3);
+  font-size: 1rem;
+  font-weight: var(--weight-medium);
+  color: var(--ink-soft);
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid var(--line);
+  white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition:
+    color var(--dur-base) var(--ease-standard),
+    border-color var(--dur-base) var(--ease-standard);
+}
+
+.staff__mode[data-active="true"] {
+  color: var(--muji-red-deep);
+  border-bottom-color: var(--muji-red);
+}
+
+.mode-label--short {
+  display: none;
+}
+
+/* --- Main: stage + queue --------------------------------------------- */
+.staff__main {
+  display: grid;
+  grid-template-columns: 1fr minmax(13rem, 18rem);
+  min-height: 0;
+}
+
+.staff__stage {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-6);
+  padding: var(--space-6);
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* Scan mode */
+.scan {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  text-align: center;
+  color: var(--ink-soft);
+  margin-block: auto;
+}
+
+.scan__capture {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  opacity: 0;
+  border: 0;
+  pointer-events: none;
+}
+
+.scan__icon {
+  width: clamp(4rem, 12vh, 7rem);
+  height: clamp(4rem, 12vh, 7rem);
+  color: var(--ink-faint);
+  margin-bottom: var(--space-2);
+}
+
+.scan__lead {
+  margin: 0;
+  font-size: clamp(1.5rem, 3.6vh, 2.25rem);
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+}
+
+.scan__hint {
+  margin: 0;
+  max-width: 34ch;
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+  text-wrap: balance;
+}
+
+/* Ready mode */
+.ready {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-5, 20px);
+  width: min(22rem, 100%);
+  margin-block: auto;
+}
+
+.ready__label {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: var(--weight-medium);
+  letter-spacing: 0.02em;
+  color: var(--ink-soft);
+}
+
+/* --- Live queue side panel ------------------------------------------- */
+.queue {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-5, 20px);
+  padding: var(--space-5, 20px) var(--space-5, 20px) var(--space-5, 20px) 0;
+  border-left: 1px solid var(--line);
+  overflow-y: auto;
+  padding-left: var(--space-5, 20px);
+}
+
+.queue__title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0 0 var(--space-3);
+  font-size: 0.8125rem;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.queue__count {
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-soft);
+  font-weight: var(--weight-medium);
+}
+
+.queue__list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.2rem;
+  padding: var(--space-2) var(--space-3);
+  font-size: 1.05rem;
+  font-weight: var(--weight-medium);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+}
+
+.chip--ready {
+  color: var(--muji-red);
+  background: color-mix(in oklch, var(--muji-red-tint) 60%, var(--canvas));
+  border-color: color-mix(in oklch, var(--muji-red) 22%, var(--line));
+  font-weight: var(--weight-semibold);
+}
+
+.chip--hold {
+  color: var(--ink);
+  background: var(--surface);
+  border-style: dashed;
+  border-color: var(--ink-faint);
+  font-weight: var(--weight-semibold);
+}
+
+.chip--hold .chip__check {
+  color: var(--ink-soft);
+}
+
+.chip--hold.chip--pickup:hover {
+  background: var(--surface-sunken);
+  border-color: var(--ink-soft);
+}
+
+.chip--pickup {
+  gap: var(--space-2);
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard),
+    transform var(--dur-fast) var(--ease-out-quint);
+}
+
+.chip--pickup:hover {
+  background: color-mix(in oklch, var(--muji-red-tint) 90%, var(--canvas));
+  border-color: var(--muji-red);
+}
+
+.chip--pickup:active {
+  transform: scale(0.96);
+}
+
+.chip__check {
+  color: var(--muji-red);
+  flex: none;
+}
+
+.queue__hint {
+  margin: 0 0 var(--space-3);
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+}
+
+.queue__empty {
+  font-size: 0.875rem;
+  color: var(--ink-soft);
+}
+
+/* --- Portrait (handheld) --------------------------------------------- */
+@media (max-width: 760px) {
+  .staff__main {
+    grid-template-columns: 1fr;
+    grid-template-rows: 1fr auto;
+  }
+  .queue {
+    flex-direction: row;
+    gap: var(--space-6);
+    border-left: none;
+    border-top: 1px solid var(--line);
+    padding: var(--space-4) var(--space-6);
+  }
+  .queue__group {
+    flex: 1;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 400px) {
+  .staff__modes {
+    padding-inline: var(--space-2);
+    gap: 0;
+  }
+  .staff__mode {
+    font-size: 0.875rem;
+    padding: var(--space-2) var(--space-2);
+  }
+  .staff__stage {
+    padding: var(--space-4);
+    gap: var(--space-4);
+  }
+}
+
+@media (max-width: 280px) {
+  .mode-label--full {
+    display: none;
+  }
+  .mode-label--short {
+    display: inline;
+  }
+  .staff__mode {
+    font-size: 0.9375rem;
+  }
+}
+
+@media (max-height: 760px) {
+  .staff__stage {
+    padding-block: var(--space-3);
+    gap: var(--space-3);
+  }
+  .ready {
+    gap: var(--space-3);
+  }
+}
+
+@media (max-height: 600px) {
+  .staff__stage {
+    padding-block: var(--space-2);
+    gap: var(--space-2);
+  }
+  .ready__label {
+    font-size: 0.875rem;
+  }
+}

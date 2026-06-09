@@ -1,0 +1,220 @@
+import { useCallback, useEffect, useMemo, useRef } from "react";
+import { AnimatePresence, LayoutGroup, motion } from "motion/react";
+import { useClock } from "../../lib/use-clock";
+import { useQueue } from "../../lib/use-queue";
+import { EASE_OUT_QUINT } from "../../lib/motion";
+import type { QueueItem } from "../../../shared/qms.ts";
+import "./display.css";
+
+const MOVE = { duration: 0.5, ease: EASE_OUT_QUINT };
+const ENTER = { duration: 0.4, ease: EASE_OUT_QUINT };
+
+const timeFmt = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" });
+const dateFmt = new Intl.DateTimeFormat("en-GB", {
+  weekday: "long",
+  day: "numeric",
+  month: "long",
+});
+
+function byAge(a: QueueItem, b: QueueItem): number {
+  return a.since - b.since;
+}
+
+// Each tier maps to a column count + paired number size in the CSS, so a
+// growing queue breaks into more readable columns instead of just shrinking.
+function preparingDensity(count: number): "xl" | "lg" | "md" | "sm" {
+  if (count <= 3) return "xl"; // 1 column
+  if (count <= 8) return "lg"; // 2 columns
+  if (count <= 15) return "md"; // 3 columns
+  return "sm"; // 4 columns
+}
+
+function readyDensity(count: number): "xl" | "lg" | "md" | "sm" {
+  if (count <= 1) return "xl"; // 1 column
+  if (count <= 4) return "lg"; // 2 columns
+  if (count <= 9) return "md"; // 3 columns
+  return "sm"; // 4 columns
+}
+
+function playChime(ctx: AudioContext): void {
+  const t = ctx.currentTime;
+  (
+    [
+      [880, 0, 0.28],
+      [1174.66, 0.22, 0.22],
+    ] as [number, number, number][]
+  ).forEach(([freq, delay, vol]) => {
+    const osc = ctx.createOscillator();
+    const env = ctx.createGain();
+    osc.connect(env);
+    env.connect(ctx.destination);
+    osc.type = "triangle";
+    osc.frequency.value = freq;
+    env.gain.setValueAtTime(0, t + delay);
+    env.gain.linearRampToValueAtTime(vol, t + delay + 0.01);
+    env.gain.exponentialRampToValueAtTime(0.001, t + delay + 1.6);
+    osc.start(t + delay);
+    osc.stop(t + delay + 1.6);
+  });
+}
+
+export default function DisplayScreen() {
+  const { items, status, chimeEnabled } = useQueue();
+  const now = useClock(1000);
+
+  const preparing = useMemo(
+    () => items.filter((i) => i.status === "preparing").sort(byAge),
+    [items],
+  );
+  const ready = useMemo(
+    () => items.filter((i) => i.status === "ready").sort(byAge),
+    [items],
+  );
+
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const prevReadyRef = useRef<Set<string> | null>(null);
+
+  const triggerChime = useCallback(() => {
+    try {
+      if (!audioCtxRef.current) {
+        audioCtxRef.current = new AudioContext();
+      }
+      const ctx = audioCtxRef.current;
+      if (ctx.state === "suspended") {
+        void ctx.resume().then(() => playChime(ctx));
+      } else {
+        playChime(ctx);
+      }
+    } catch {
+      /* AudioContext unavailable */
+    }
+  }, []);
+
+  useEffect(() => {
+    const unlock = () => {
+      try {
+        if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
+        void audioCtxRef.current.resume();
+      } catch {
+        /* AudioContext unavailable */
+      }
+    };
+    window.addEventListener("pointerdown", unlock, { once: true });
+    window.addEventListener("keydown", unlock, { once: true });
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, []);
+
+  useEffect(() => {
+    const currentIds = new Set(ready.map((i) => i.number));
+    if (prevReadyRef.current === null) {
+      prevReadyRef.current = currentIds;
+      return;
+    }
+    const hasNew = ready.some((i) => !prevReadyRef.current!.has(i.number));
+    prevReadyRef.current = currentIds;
+    if (hasNew && chimeEnabled) triggerChime();
+  }, [ready, chimeEnabled, triggerChime]);
+
+  return (
+    <div className="display">
+      <header className="display__head">
+        <span className="display__date">{dateFmt.format(now)}</span>
+        <time className="display__time tnum" dateTime={now.toISOString()}>
+          {timeFmt.format(now)}
+        </time>
+      </header>
+
+      <main className="board">
+        <LayoutGroup>
+          <section className="prep" aria-label="Preparing">
+            <header className="col__head">
+              <h2 className="col__label">Preparing</h2>
+              <span className="col__rule" aria-hidden="true" />
+            </header>
+            <div className="prep__list" data-density={preparingDensity(preparing.length)}>
+              {preparing.length === 0 ? (
+                <p className="prep__empty">No orders yet</p>
+              ) : (
+                <AnimatePresence mode="popLayout" initial={false}>
+                  {preparing.map((item) => (
+                    <motion.div
+                      key={item.number}
+                      layout
+                      layoutId={`q-${item.number}`}
+                      className="prep__item"
+                      initial={{ opacity: 0, scale: 0.9, y: 14 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.92 }}
+                      transition={{ layout: MOVE, default: ENTER }}
+                    >
+                      <span className="prep__num tnum">{item.number}</span>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              )}
+            </div>
+            <footer className="promo">
+              <p className="promo__lead">Simple coffee, made with care.</p>
+              <p className="promo__note">Single-origin drip and seasonal blends, brewed to order at the counter.</p>
+            </footer>
+          </section>
+
+          <section className="serve" aria-label="Now Serving">
+            <header className="col__head">
+              <h2 className="col__label">Now Serving</h2>
+              <span className="col__rule" aria-hidden="true" />
+            </header>
+            <div className="serve__body">
+              {ready.length === 0 ? (
+                <p className="serve__empty">Nothing ready yet</p>
+              ) : (
+                <>
+                  <div className="serve__list" data-density={readyDensity(ready.length)}>
+                    <AnimatePresence mode="popLayout" initial={false}>
+                      {ready.map((item) => (
+                        <motion.div
+                          key={item.number}
+                          layout
+                          layoutId={`q-${item.number}`}
+                          className="serve__item"
+                          initial={{ opacity: 0, scale: 0.9, y: 14 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.92 }}
+                          transition={{ layout: MOVE, default: ENTER }}
+                        >
+                          <span className="serve__num tnum">{item.number}</span>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                  <div className="serve__foot">
+                    <span className="serve__rule" aria-hidden="true" />
+                    <p className="serve__caption">Please proceed to the collection counter.</p>
+                  </div>
+                </>
+              )}
+            </div>
+          </section>
+        </LayoutGroup>
+      </main>
+
+      <AnimatePresence>
+        {status !== "online" && (
+          <motion.div
+            className="display__offline"
+            role="status"
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            transition={ENTER}
+          >
+            Reconnecting to the counter…
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
