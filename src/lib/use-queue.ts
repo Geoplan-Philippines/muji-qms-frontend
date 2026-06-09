@@ -36,7 +36,7 @@ export interface QueueApi {
   clearError: () => void;
 }
 
-type BackendStatus = "PREPARING" | "SERVED" | "ON_HOLD" | "CANCELLED";
+type BackendStatus = "PREPARING" | "SERVING" | "SERVED" | "ON_HOLD" | "CANCELLED";
 
 interface BackendOrder {
   id: string;
@@ -51,12 +51,12 @@ function toItem(order: BackendOrder): QueueItem | null {
   switch (order.orderStatus) {
     case "PREPARING":
       return { id: order.id, number: order.orderNumber, status: "preparing", since: new Date(order.createdAt).getTime() };
-    case "SERVED":
+    case "SERVING":
       return { id: order.id, number: order.orderNumber, status: "ready", since: new Date(order.updatedAt).getTime() };
     case "ON_HOLD":
       return { id: order.id, number: order.orderNumber, status: "holding", since: new Date(order.updatedAt).getTime() };
     default:
-      return null; // CANCELLED — remove from board
+      return null; // SERVED (done/collected) and CANCELLED — remove from board
   }
 }
 
@@ -203,7 +203,7 @@ export function useQueue(): QueueApi {
   const markReady = useCallback((number: string) => {
     const item = findItem(number);
     if (!item?.id) return;
-    apiPatch(item.id, "SERVED").catch((err) => reportError(number, "serve_failed", err));
+    apiPatch(item.id, "SERVING").catch((err) => reportError(number, "serve_failed", err));
   }, []);
 
   const hold = useCallback((number: string) => {
@@ -215,7 +215,7 @@ export function useQueue(): QueueApi {
   const collect = useCallback((number: string) => {
     const item = findItem(number);
     if (!item?.id) return;
-    apiPatch(item.id, "CANCELLED").catch((err) => reportError(number, "collect_failed", err));
+    apiPatch(item.id, "SERVED").catch((err) => reportError(number, "collect_failed", err));
   }, []);
 
   const unready = useCallback((number: string) => {
