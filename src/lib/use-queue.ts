@@ -24,7 +24,7 @@ export interface QueueApi {
   canUndo: boolean;
   chimeEnabled: boolean;
   lastError: QueueError | null;
-  scan: (raw: string) => void;
+  scan: (raw: string) => Promise<boolean>;
   markReady: (number: string) => void;
   hold: (number: string) => void;
   collect: (number: string) => void;
@@ -188,16 +188,26 @@ export function useQueue(): QueueApi {
     setLastError({ number, code, message });
   };
 
-  const scan = useCallback((raw: string) => {
+  const scan = useCallback(async (raw: string): Promise<boolean> => {
     const number = extractNumber(raw);
     if (!number) {
       setLastError({ number: null, code: "invalid_scan", message: "Could not read a number" });
-      return;
+      return false;
     }
-    apiCreateOrder(number).catch((err) => {
-      const code = (err as { code?: string }).code === "already_exists" ? "already_exists" : "scan_failed";
-      reportError(number, code, err);
-    });
+    try {
+      await apiCreateOrder(number);
+      return true;
+    } catch (err) {
+      if ((err as { code?: string }).code === "already_exists") {
+        // Branch the message on what's actually on the board: an active order
+        // staff can see, vs. a number the backend still knows but isn't shown.
+        const existing = findItem(number);
+        setLastError({ number, code: existing ? `dup_${existing.status}` : "dup_used", message: "" });
+      } else {
+        reportError(number, "scan_failed", err);
+      }
+      return false;
+    }
   }, []);
 
   const markReady = useCallback((number: string) => {

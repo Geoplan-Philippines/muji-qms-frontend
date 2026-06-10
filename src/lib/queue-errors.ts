@@ -4,6 +4,16 @@ export function formatQueueError(e: QueueError): string {
   switch (e.code) {
     case "invalid_scan":
       return "Could not read a number from the barcode";
+    case "dup_preparing":
+      return e.number ? `${e.number} is already preparing` : "Order is already preparing";
+    case "dup_ready":
+      return e.number ? `${e.number} is already being served` : "Order is already being served";
+    case "dup_holding":
+      return e.number ? `${e.number} is already on hold` : "Order is already on hold";
+    case "dup_used":
+      return e.number
+        ? `${e.number} is already in use but not on the board`
+        : "That number is already in use";
     case "already_exists":
       return e.number ? `${e.number} is already in the queue` : "Order is already in the queue";
     case "scan_failed":

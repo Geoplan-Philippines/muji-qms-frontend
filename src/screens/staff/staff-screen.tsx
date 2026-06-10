@@ -31,14 +31,15 @@ export default function StaffScreen() {
   }, [lastError, show]);
 
   const onScan = useCallback(
-    (raw: string) => {
+    async (raw: string) => {
       const number = extractNumber(raw);
       if (!number) {
         show("error", null, "Could not read a number");
         return;
       }
-      scan(raw);
-      show("ok", number, "now preparing");
+      // Only confirm once the backend accepts the create. On failure the
+      // lastError effect raises the error flash, so no success is shown.
+      if (await scan(raw)) show("ok", number, "now preparing");
     },
     [scan, show],
   );
