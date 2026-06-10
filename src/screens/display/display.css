@@ -1,6 +1,6 @@
 .display {
   display: grid;
-  grid-template-rows: auto 1fr;
+  grid-template-rows: auto 1fr auto;
   height: 100dvh;
   background: var(--canvas);
   overflow: hidden;
@@ -12,20 +12,20 @@
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: clamp(var(--space-4), 2.4vw, var(--space-8))
+  padding: clamp(var(--space-1), 0.7vw, var(--space-3))
     clamp(var(--space-6), 3vw, var(--space-12));
   border-bottom: 1px solid var(--line);
 }
 
 .display__date {
-  font-size: clamp(0.9rem, 1.4vw, 1.6rem);
+  font-size: clamp(0.7rem, 0.9vw, 1rem);
   font-weight: var(--weight-medium);
   letter-spacing: 0.01em;
   color: var(--ink-soft);
 }
 
 .display__time {
-  font-size: clamp(1.6rem, 3vw, 3rem);
+  font-size: clamp(1rem, 1.7vw, 1.7rem);
   font-weight: var(--weight-bold);
   color: var(--muji-red);
   line-height: 1;
@@ -49,7 +49,7 @@
 
 .col__label {
   margin: 0;
-  font-size: clamp(1.5rem, 2.8vw, 3.2rem);
+  font-size: clamp(3rem, 3.8vw, 5.4rem);
   font-weight: var(--weight-bold);
   letter-spacing: 0.1em;
   line-height: 1;
@@ -110,22 +110,22 @@
 }
 
 .prep__num {
-  font-size: clamp(3rem, 9vw, 9rem);
+  font-size: clamp(2.3rem, 7vw, 7rem);
   font-weight: var(--weight-bold);
   line-height: 0.9;
   color: var(--ink);
 }
 
 .prep__list[data-density="lg"] .prep__num {
-  font-size: clamp(2.5rem, 6vw, 6rem);
+  font-size: clamp(2rem, 4.6vw, 4.6rem);
 }
 
 .prep__list[data-density="md"] .prep__num {
-  font-size: clamp(2rem, 4vw, 4.5rem);
+  font-size: clamp(1.6rem, 3.1vw, 3.5rem);
 }
 
 .prep__list[data-density="sm"] .prep__num {
-  font-size: clamp(1.6rem, 3vw, 3.2rem);
+  font-size: clamp(1.25rem, 2.3vw, 2.5rem);
 }
 
 .prep__empty {
@@ -134,25 +134,28 @@
   color: var(--ink-soft);
 }
 
-/* --- Promo (bottom of the preparing column) --------------------------- */
-.promo {
-  padding: clamp(var(--space-4), 2vw, var(--space-8))
+/* --- Ad frame (full-width banner) ------------------------------------- */
+/* Boilerplate ad slot: one frame spanning the bottom of the screen.
+   Swap the inner content for ad creatives later — the frame stays. */
+.adframe {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: clamp(var(--space-3), 1.5vw, var(--space-6));
+  padding: clamp(var(--space-3), 1.6vw, var(--space-6))
     clamp(var(--space-5), 3vw, var(--space-12));
+  background: #fff;
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
+  text-align: center;
 }
 
-.promo__lead {
+.adframe__lead {
   margin: 0;
-  font-size: clamp(1.1rem, 1.9vw, 2rem);
+  font-size: clamp(1rem, 1.7vw, 1.8rem);
   font-weight: var(--weight-bold);
   letter-spacing: -0.01em;
   color: var(--muji-red);
-  text-wrap: balance;
-}
-
-.promo__note {
-  margin: var(--space-1) 0 0;
-  font-size: clamp(0.85rem, 1.1vw, 1.2rem);
-  color: var(--ink-soft);
 }
 
 /* --- Now Serving column (drenched) ------------------------------------ */
@@ -206,15 +209,6 @@
   grid-template-columns: repeat(4, 1fr);
 }
 
-.serve__foot {
-  flex: none;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: clamp(var(--space-3), 1.5vw, var(--space-6));
-  padding-top: clamp(var(--space-3), 2vw, var(--space-6));
-}
-
 .serve__item {
   display: flex;
   align-items: center;
@@ -222,44 +216,26 @@
 }
 
 .serve__num {
-  font-size: clamp(5rem, 15vw, 15rem);
+  font-size: clamp(3.8rem, 11.5vw, 11.5rem);
   font-weight: var(--weight-bold);
   line-height: 0.86;
   color: var(--accent-on);
 }
 
 .serve__list[data-density="xl"] .serve__num {
-  font-size: clamp(6rem, 18vw, 18rem);
+  font-size: clamp(4.6rem, 13.8vw, 13.8rem);
 }
 
 .serve__list[data-density="lg"] .serve__num {
-  font-size: clamp(4rem, 9vw, 9rem);
+  font-size: clamp(3.1rem, 6.9vw, 6.9rem);
 }
 
 .serve__list[data-density="md"] .serve__num {
-  font-size: clamp(3rem, 6vw, 6rem);
+  font-size: clamp(2.3rem, 4.6vw, 4.6rem);
 }
 
 .serve__list[data-density="sm"] .serve__num {
-  font-size: clamp(2.2rem, 4vw, 4.2rem);
-}
-
-.serve__rule {
-  width: clamp(2.5rem, 4vw, 4.5rem);
-  height: 3px;
-  border-radius: var(--radius-pill);
-  background: color-mix(in oklch, var(--accent-on) 72%, transparent);
-}
-
-.serve__caption {
-  margin: 0;
-  max-width: 18ch;
-  text-align: center;
-  font-size: clamp(1.1rem, 1.8vw, 2rem);
-  font-weight: var(--weight-semibold);
-  line-height: 1.25;
-  color: var(--accent-on);
-  text-wrap: balance;
+  font-size: clamp(1.7rem, 3.1vw, 3.2rem);
 }
 
 .serve__empty {

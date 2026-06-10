@@ -156,10 +156,6 @@ export default function DisplayScreen() {
                 </AnimatePresence>
               )}
             </div>
-            <footer className="promo">
-              <p className="promo__lead">Simple coffee, made with care.</p>
-              <p className="promo__note">Single-origin drip and seasonal blends, brewed to order at the counter.</p>
-            </footer>
           </section>
 
           <section className="serve" aria-label="Now Serving">
@@ -171,35 +167,35 @@ export default function DisplayScreen() {
               {ready.length === 0 ? (
                 <p className="serve__empty">Nothing ready yet</p>
               ) : (
-                <>
-                  <div className="serve__list" data-density={readyDensity(ready.length)}>
-                    <AnimatePresence mode="popLayout" initial={false}>
-                      {ready.map((item) => (
-                        <motion.div
-                          key={item.number}
-                          layout
-                          layoutId={`q-${item.number}`}
-                          className="serve__item"
-                          initial={{ opacity: 0, scale: 0.9, y: 14 }}
-                          animate={{ opacity: 1, scale: 1, y: 0 }}
-                          exit={{ opacity: 0, scale: 0.92 }}
-                          transition={{ layout: MOVE, default: ENTER }}
-                        >
-                          <span className="serve__num tnum">{item.number}</span>
-                        </motion.div>
-                      ))}
-                    </AnimatePresence>
-                  </div>
-                  <div className="serve__foot">
-                    <span className="serve__rule" aria-hidden="true" />
-                    <p className="serve__caption">Please proceed to the collection counter.</p>
-                  </div>
-                </>
+                <div className="serve__list" data-density={readyDensity(ready.length)}>
+                  <AnimatePresence mode="popLayout" initial={false}>
+                    {ready.map((item) => (
+                      <motion.div
+                        key={item.number}
+                        layout
+                        layoutId={`q-${item.number}`}
+                        className="serve__item"
+                        initial={{ opacity: 0, scale: 0.9, y: 14 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.92 }}
+                        transition={{ layout: MOVE, default: ENTER }}
+                      >
+                        <span className="serve__num tnum">{item.number}</span>
+                      </motion.div>
+                    ))}
+                  </AnimatePresence>
+                </div>
               )}
             </div>
           </section>
         </LayoutGroup>
       </main>
+
+      {/* Full-width banner — ad slot boilerplate. Replace the inner content
+          with rotating ad creatives later; the frame/layout stays. */}
+      <footer className="adframe">
+        <p className="adframe__lead">Simple coffee, made with care.</p>
+      </footer>
 
       <AnimatePresence>
         {status !== "online" && (
