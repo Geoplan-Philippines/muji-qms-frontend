@@ -1,3 +1,4 @@
+import mujiLogo from "../assets/muji_logo.png";
 import "./muji-logo.css";
 
 /**
@@ -9,7 +10,7 @@ export function MujiLogo() {
   return (
     <img
       className="muji-logo"
-      src="/src/assets/muji_logo.png"
+      src={mujiLogo}
       alt="MUJI"
       width={1024}
       height={1024}

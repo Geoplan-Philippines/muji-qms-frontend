@@ -4,6 +4,7 @@ import { useClock } from "../../lib/use-clock";
 import { useQueue } from "../../lib/use-queue";
 import { EASE_OUT_QUINT } from "../../lib/motion";
 import type { QueueItem } from "../../../shared/qms.ts";
+import { MujiLogo } from "../../components/muji-logo";
 import "./display.css";
 
 const MOVE = { duration: 0.5, ease: EASE_OUT_QUINT };
@@ -24,7 +25,7 @@ function byAge(a: QueueItem, b: QueueItem): number {
 // growing queue breaks into more readable columns instead of just shrinking.
 // Both columns share these breakpoints so they lay out identically.
 function preparingDensity(count: number): "xl" | "lg" | "md" | "sm" {
-  if (count <= 3) return "xl"; // 1 column
+  if (count <= 4) return "xl"; // 1 column
   if (count <= 8) return "lg"; // 2 columns
   if (count <= 15) return "md"; // 3 columns
   return "sm"; // 4 columns
@@ -115,10 +116,13 @@ export default function DisplayScreen() {
   return (
     <div className="display">
       <header className="display__head">
-        <span className="display__date">{dateFmt.format(now)}</span>
-        <time className="display__time tnum" dateTime={now.toISOString()}>
-          {timeFmt.format(now)}
-        </time>
+        <MujiLogo />
+        <div className="display__head-meta">
+          <span className="display__date">{dateFmt.format(now)}</span>
+          <time className="display__time tnum" dateTime={now.toISOString()}>
+            {timeFmt.format(now)}
+          </time>
+        </div>
       </header>
 
       <main className="board">

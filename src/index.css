@@ -40,22 +40,26 @@
      red still looks off on the wall display. */
   --muji-red: #a82a26;
   --muji-red-deep: #8c211d;
-  --muji-red-tint: oklch(95% 0.033 21);
+  --muji-red-tint: #ffe6e5;
 
+  /* All tokens pinned to sRGB hex (converted from their former oklch values).
+     The wall-display TV browser doesn't support oklch(), so any background
+     using it resolved to nothing and rendered black — header, Preparing, and
+     the ad frame all went dark. Hex renders identically everywhere. */
   /* --- Color: ink (text + PREPARING numbers) -------------------------- */
-  --ink: oklch(26% 0.006 40);
-  --ink-soft: oklch(47% 0.012 40);
-  --ink-faint: oklch(62% 0.012 40);
+  --ink: #272322;
+  --ink-soft: #615956;
+  --ink-faint: #8d8481;
 
   /* --- Color: surfaces ------------------------------------------------ */
-  --canvas: oklch(98.5% 0.0035 40);
-  --surface: oklch(96.5% 0.005 40);
-  --surface-sunken: oklch(93.5% 0.007 40);
-  --line: oklch(90% 0.006 40);
+  --canvas: #fcf9f8;
+  --surface: #f7f2f1;
+  --surface-sunken: #eee8e6;
+  --line: #e2dddb;
 
   /* --- Color: roles --------------------------------------------------- */
-  --focus-ring: oklch(43% 0.175 22);
-  --accent-on: oklch(98.5% 0.0035 40);
+  --focus-ring: #99001e;
+  --accent-on: #fcf9f8;
 
   /* --- Typography ----------------------------------------------------- */
   --font-sans: Helvetica, "Helvetica Neue", Arial, system-ui, sans-serif;
@@ -90,8 +94,8 @@
   --radius-pill: 999px;
 
   /* --- Elevation ------------------------------------------------------ */
-  --shadow-ambient: 0 2px 8px oklch(26% 0.006 40 / 0.06),
-    0 8px 24px oklch(26% 0.006 40 / 0.08);
+  --shadow-ambient: 0 2px 8px rgba(39, 35, 34, 0.06),
+    0 8px 24px rgba(39, 35, 34, 0.08);
 
   /* --- Motion --------------------------------------------------------- */
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
@@ -106,7 +110,7 @@
   --z-overlay: 200;
   --z-toast: 300;
 
-  color-scheme: light;
+  color-scheme: only light;
   font-family: var(--font-sans);
   font-size: 16px;
   line-height: 1.5;

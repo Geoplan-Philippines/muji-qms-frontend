@@ -9,12 +9,27 @@
 /* --- Header ----------------------------------------------------------- */
 .display__head {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
   padding: clamp(var(--space-1), 0.7vw, var(--space-3))
     clamp(var(--space-6), 3vw, var(--space-12));
   border-bottom: 1px solid var(--line);
+}
+
+/* Brand mark, left. Override the component's em-based height with a viewport
+   clamp tuned for the across-the-room display. */
+.display__head .muji-logo {
+  height: clamp(2rem, 3.4vw, 3.6rem);
+}
+
+/* Date + time, grouped on the right. */
+.display__head-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: clamp(var(--space-1), 0.3vw, var(--space-2));
+  line-height: 1;
 }
 
 .display__date {
@@ -42,14 +57,14 @@
 .col__head {
   display: flex;
   flex-direction: column;
-  gap: clamp(var(--space-2), 1vw, var(--space-4));
-  padding: clamp(var(--space-5), 3vw, var(--space-12))
+  gap: clamp(var(--space-1), 0.6vw, var(--space-3));
+  padding: clamp(var(--space-3), 1.5vw, var(--space-6))
     clamp(var(--space-5), 3vw, var(--space-12)) 0;
 }
 
 .col__label {
   margin: 0;
-  font-size: clamp(3rem, 3.8vw, 5.4rem);
+  font-size: clamp(3.6rem, 4.6vw, 6.6rem);
   font-weight: var(--weight-bold);
   letter-spacing: 0.1em;
   line-height: 1;
@@ -58,7 +73,7 @@
 }
 
 .col__rule {
-  width: clamp(3rem, 5vw, 5.5rem);
+  width: clamp(5rem, 9vw, 10rem);
   height: 4px;
   border-radius: var(--radius-pill);
 }
@@ -83,12 +98,13 @@
   min-height: 0;
   display: grid;
   grid-template-columns: 1fr;
-  align-content: start;
-  justify-items: center;
+  grid-auto-rows: 1fr;
+  align-content: stretch;
+  justify-items: stretch;
   column-gap: clamp(var(--space-3), 2vw, var(--space-8));
-  row-gap: clamp(var(--space-6), 4vh, var(--space-16));
-  padding: clamp(var(--space-5), 4vh, var(--space-12))
-    clamp(var(--space-5), 3vw, var(--space-12));
+  row-gap: clamp(var(--space-3), 2.4vh, var(--space-8));
+  padding: clamp(var(--space-2), 1.5vh, var(--space-5))
+    clamp(var(--space-4), 2vw, var(--space-8));
   overflow: hidden;
 }
 
@@ -106,28 +122,22 @@
 
 .prep__item {
   min-height: 0;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  container-type: size;
 }
 
+/* The number grows to fill its own grid cell: width capped by ~4 digits
+   (38cqw) and height capped by the cell (78cqh), whichever is smaller. This
+   keeps digits as large as possible at any column/row count — no per-density
+   font sizes needed. */
 .prep__num {
-  font-size: clamp(2.3rem, 7vw, 7rem);
+  font-size: min(30cqw, 62cqh);
   font-weight: var(--weight-bold);
   line-height: 0.9;
   color: var(--ink);
-}
-
-.prep__list[data-density="lg"] .prep__num {
-  font-size: clamp(2rem, 4.6vw, 4.6rem);
-}
-
-.prep__list[data-density="md"] .prep__num {
-  font-size: clamp(1.9rem, 3.7vw, 4.2rem);
-}
-
-.prep__list[data-density="sm"] .prep__num {
-  font-size: clamp(1.5rem, 2.9vw, 3.1rem);
 }
 
 .prep__empty {
@@ -191,12 +201,13 @@
   min-height: 0;
   display: grid;
   grid-template-columns: 1fr;
-  align-content: start;
-  justify-items: center;
+  grid-auto-rows: 1fr;
+  align-content: stretch;
+  justify-items: stretch;
   column-gap: clamp(var(--space-3), 2vw, var(--space-8));
-  row-gap: clamp(var(--space-6), 4vh, var(--space-16));
-  padding: clamp(var(--space-5), 4vh, var(--space-12))
-    clamp(var(--space-5), 3vw, var(--space-12));
+  row-gap: clamp(var(--space-3), 2.4vh, var(--space-8));
+  padding: clamp(var(--space-2), 1.5vh, var(--space-5))
+    clamp(var(--space-4), 2vw, var(--space-8));
   overflow: hidden;
 }
 
@@ -213,34 +224,26 @@
 }
 
 .serve__item {
+  min-height: 0;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: center;
+  container-type: size;
 }
 
+/* Same fill-the-cell sizing as .prep__num. */
 .serve__num {
-  font-size: clamp(2.3rem, 7vw, 7rem);
+  font-size: min(30cqw, 62cqh);
   font-weight: var(--weight-bold);
   line-height: 0.9;
   color: var(--accent-on);
 }
 
-.serve__list[data-density="lg"] .serve__num {
-  font-size: clamp(2rem, 4.6vw, 4.6rem);
-}
-
-.serve__list[data-density="md"] .serve__num {
-  font-size: clamp(1.9rem, 3.7vw, 4.2rem);
-}
-
-.serve__list[data-density="sm"] .serve__num {
-  font-size: clamp(1.5rem, 2.9vw, 3.1rem);
-}
-
 .serve__empty {
   margin: auto;
   font-size: clamp(1.2rem, 2vw, 2rem);
-  color: color-mix(in oklch, var(--accent-on) 85%, transparent);
+  color: rgba(252, 249, 248, 0.85);
 }
 
 /* --- Offline notice --------------------------------------------------- */
