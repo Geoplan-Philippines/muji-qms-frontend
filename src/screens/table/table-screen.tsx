@@ -86,7 +86,7 @@ export default function TableScreen() {
   const handleHold = useCallback(
     (number: string) => {
       hold(number);
-      show("ok", number, "holding remainder");
+      show("ok", number, "serving later");
     },
     [hold, show],
   );
@@ -94,7 +94,7 @@ export default function TableScreen() {
   const handleCollectRemainder = useCallback(
     (number: string) => {
       collect(number);
-      show("ok", number, "remainder picked up");
+      show("ok", number, "picked up");
     },
     [collect, show],
   );
@@ -284,10 +284,10 @@ export default function TableScreen() {
                         type="button"
                         className="serving__hold"
                         onClick={() => handleHold(i.number)}
-                        aria-label={`Hold remainder of order ${i.number} for later pickup`}
+                        aria-label={`Serve order ${i.number} later`}
                       >
                         <Clock size={15} aria-hidden="true" />
-                        Hold
+                        Serve for later
                       </button>
                       <button
                         type="button"
@@ -305,11 +305,11 @@ export default function TableScreen() {
             )}
 
             {holding.length > 0 && (
-              <section className="holding" aria-label="On hold">
+              <section className="holding" aria-label="Serve later">
                 <p className="holding__label">
-                  On hold <span className="holding__count tnum">{holding.length}</span>
+                  Serve Later <span className="holding__count tnum">{holding.length}</span>
                 </p>
-                <p className="holding__hint">Remainder to collect later</p>
+                <p className="holding__hint">Kept to collect later</p>
                 <ul className="holding__list">
                   {holding.map((i) => (
                     <li key={i.number} className="holding__item">
@@ -317,9 +317,18 @@ export default function TableScreen() {
                       <span className="holding__wait">{waitLabel(i.since, nowMs)}</span>
                       <button
                         type="button"
+                        className="holding__serve"
+                        onClick={() => serve(i.number)}
+                        aria-label={`Move order ${i.number} back to serving`}
+                      >
+                        <Undo2 size={15} aria-hidden="true" />
+                        Serve
+                      </button>
+                      <button
+                        type="button"
                         className="holding__collect"
                         onClick={() => handleCollectRemainder(i.number)}
-                        aria-label={`Order ${i.number} remainder picked up`}
+                        aria-label={`Order ${i.number} picked up`}
                       >
                         <Check size={15} className="serving__check" aria-hidden="true" />
                         Collect

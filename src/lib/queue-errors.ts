@@ -9,7 +9,7 @@ export function formatQueueError(e: QueueError): string {
     case "dup_ready":
       return e.number ? `${e.number} is already being served` : "Order is already being served";
     case "dup_holding":
-      return e.number ? `${e.number} is already on hold` : "Order is already on hold";
+      return e.number ? `${e.number} is already set to serve later` : "Order is already set to serve later";
     case "dup_used":
       return e.number
         ? `${e.number} is already in use but not on the board`
@@ -21,7 +21,7 @@ export function formatQueueError(e: QueueError): string {
     case "serve_failed":
       return e.number ? `Could not serve ${e.number}` : "Could not serve order";
     case "hold_failed":
-      return e.number ? `Could not hold ${e.number}` : "Could not hold order";
+      return e.number ? `Could not save ${e.number} for later` : "Could not save order for later";
     case "collect_failed":
       return e.number ? `Could not collect ${e.number}` : "Could not collect order";
     case "unready_failed":

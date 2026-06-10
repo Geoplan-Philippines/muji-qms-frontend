@@ -6,6 +6,15 @@
   overflow: hidden;
 }
 
+/* Shorter header on the table screen only (leaves the Counter screen as-is). */
+.table > .station-bar {
+  padding-block: var(--space-1);
+}
+
+.table > .station-bar .station-bar__brand {
+  font-size: 0.8rem;
+}
+
 .table__main {
   display: grid;
   grid-template-columns: minmax(0, 1.4fr) minmax(22rem, 1fr);
@@ -368,6 +377,34 @@
 }
 
 .holding__collect:active {
+  transform: scale(0.96);
+}
+
+/* Secondary action — move a Serve Later order back to Serving. */
+.holding__serve {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 2.25rem;
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.8125rem;
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  transition:
+    background var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard),
+    transform var(--dur-fast) var(--ease-out-quint);
+}
+
+.holding__serve:hover {
+  background: var(--surface-sunken);
+  border-color: var(--ink-faint);
+}
+
+.holding__serve:active {
   transform: scale(0.96);
 }
 

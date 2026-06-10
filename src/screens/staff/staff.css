@@ -234,20 +234,13 @@
 
 /* --- Portrait (handheld) --------------------------------------------- */
 @media (max-width: 760px) {
+  /* Small screens (e.g. the handheld counter): hide the Preparing / Serving /
+     On Hold panels and give the scan/serve stage the full width. */
   .staff__main {
     grid-template-columns: 1fr;
-    grid-template-rows: 1fr auto;
   }
   .queue {
-    flex-direction: row;
-    gap: var(--space-6);
-    border-left: none;
-    border-top: 1px solid var(--line);
-    padding: var(--space-4) var(--space-6);
-  }
-  .queue__group {
-    flex: 1;
-    min-width: 0;
+    display: none;
   }
 }
 

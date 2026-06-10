@@ -120,7 +120,7 @@ export default function StaffScreen() {
   const confirmHoldRemainder = useCallback(
     (number: string) => {
       hold(number);
-      show("ok", number, "holding remainder");
+      show("ok", number, "serving later");
       setChoosing(null);
     },
     [hold, show],
@@ -129,7 +129,7 @@ export default function StaffScreen() {
   const handleCollectRemainder = useCallback(
     (number: string) => {
       collect(number);
-      show("ok", number, "remainder picked up");
+      show("ok", number, "picked up");
     },
     [collect, show],
   );
@@ -257,10 +257,10 @@ export default function StaffScreen() {
           </div>
           <div className="queue__group">
             <h2 className="queue__title">
-              On Hold <span className="queue__count">{holding.length}</span>
+              Serve Later <span className="queue__count">{holding.length}</span>
             </h2>
             {holding.length > 0 && (
-              <p className="queue__hint">Remainder to collect — tap when picked up</p>
+              <p className="queue__hint">Kept for later — tap when the customer collects it</p>
             )}
             <ul className="queue__list">
               {holding.length === 0 && <li className="queue__empty">None</li>}
@@ -270,7 +270,7 @@ export default function StaffScreen() {
                     type="button"
                     className="chip chip--hold chip--pickup"
                     onClick={() => handleCollectRemainder(i.number)}
-                    aria-label={`Order ${i.number} remainder picked up`}
+                    aria-label={`Order ${i.number} picked up`}
                   >
                     <span className="tnum">{i.number}</span>
                     <Check className="chip__check" size={14} aria-hidden="true" />

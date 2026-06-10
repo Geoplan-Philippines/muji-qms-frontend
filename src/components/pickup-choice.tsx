@@ -8,15 +8,15 @@ interface PickupChoiceProps {
   number: string | null;
   /** Customer collected the whole order — clear the number off the board. */
   onPickedUpAll: () => void;
-  /** Partial pickup — keep the number on the board for the remainder. */
+  /** Partial pickup — keep the number on the board to serve the rest later. */
   onHoldRemainder: () => void;
   onCancel: () => void;
 }
 
 /**
  * Asked when staff tap a serving number: did the customer take everything, or
- * just part of it? "Keep for remainder" moves the order to the hold area so the
- * number stays on the board until the rest is picked up later.
+ * just part of it? "Serve rest later" moves the order to the Serve Later area so
+ * the number stays on the board until the rest is picked up later.
  */
 export function PickupChoice({
   number,
@@ -78,8 +78,8 @@ export function PickupChoice({
                 className="pickup__action pickup__action--partial"
                 onClick={onHoldRemainder}
               >
-                <span className="pickup__action-title">Partial — keep number</span>
-                <span className="pickup__action-sub">Hold for remainder, pick up later</span>
+                <span className="pickup__action-title">Serve rest later</span>
+                <span className="pickup__action-sub">Keep the number for a later pickup</span>
               </button>
             </div>
 

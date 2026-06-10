@@ -22,17 +22,11 @@ function byAge(a: QueueItem, b: QueueItem): number {
 
 // Each tier maps to a column count + paired number size in the CSS, so a
 // growing queue breaks into more readable columns instead of just shrinking.
+// Both columns share these breakpoints so they lay out identically.
 function preparingDensity(count: number): "xl" | "lg" | "md" | "sm" {
   if (count <= 3) return "xl"; // 1 column
   if (count <= 8) return "lg"; // 2 columns
   if (count <= 15) return "md"; // 3 columns
-  return "sm"; // 4 columns
-}
-
-function readyDensity(count: number): "xl" | "lg" | "md" | "sm" {
-  if (count <= 1) return "xl"; // 1 column
-  if (count <= 4) return "lg"; // 2 columns
-  if (count <= 9) return "md"; // 3 columns
   return "sm"; // 4 columns
 }
 
@@ -167,7 +161,7 @@ export default function DisplayScreen() {
               {ready.length === 0 ? (
                 <p className="serve__empty">Nothing ready yet</p>
               ) : (
-                <div className="serve__list" data-density={readyDensity(ready.length)}>
+                <div className="serve__list" data-density={preparingDensity(ready.length)}>
                   <AnimatePresence mode="popLayout" initial={false}>
                     {ready.map((item) => (
                       <motion.div

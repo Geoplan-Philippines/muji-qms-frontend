@@ -67,7 +67,7 @@
 }
 
 .conn[data-status="online"] .conn__dot {
-  background: var(--ink);
+  background: #1faa59;
 }
 
 .conn[data-status="offline"] .conn__dot,
@@ -127,17 +127,28 @@
 
 @media (max-width: 520px) {
   .station-bar {
-    padding-inline: var(--space-4);
+    padding: var(--space-2) var(--space-4);
+  }
+  .station-bar__brand {
+    font-size: 0.95rem;
   }
   .station-bar__role,
   .station-bar__clock {
     display: none;
   }
-  .conn__text {
-    display: none;
-  }
   .station-bar__undo {
+    min-height: 2rem;
     padding: var(--space-1) var(--space-3);
     font-size: 0.8125rem;
+  }
+}
+
+/* Short handheld screens: trim the header's height so the stage gets the room. */
+@media (max-height: 600px) {
+  .station-bar {
+    padding-block: var(--space-2);
+  }
+  .station-bar__brand {
+    font-size: 0.95rem;
   }
 }
