@@ -35,8 +35,11 @@
      buttons still clear AA. sRGB gamut-maps the chroma down to its ceiling;
      wide-gamut screens (the wall-display TV, modern tablets) get the fuller,
      more vivid red via the color-gamut: p3 block below. */
-  --muji-red: oklch(50% 0.19 21);
-  --muji-red-deep: oklch(43% 0.175 22);
+  /* Pinned in sRGB hex so TV browsers render the exact same red instead of
+     gamut-mapping an oklch() value into pink/magenta. Tune these two if the
+     red still looks off on the wall display. */
+  --muji-red: #a82a26;
+  --muji-red-deep: #8c211d;
   --muji-red-tint: oklch(95% 0.033 21);
 
   /* --- Color: ink (text + PREPARING numbers) -------------------------- */
@@ -114,15 +117,9 @@
   text-rendering: optimizeLegibility;
 }
 
-/* Wide-gamut displays (the wall-display TV, modern tablets) render the brand
-   red more vividly than sRGB allows. Lightness is held near the sRGB value so
-   white-on-red contrast stays AA; only chroma expands into Display-P3. */
-@media (color-gamut: p3) {
-  :root {
-    --muji-red: oklch(50% 0.25 21);
-    --muji-red-deep: oklch(44% 0.21 22);
-  }
-}
+/* NOTE: The wide-gamut P3 boost was removed — on the Google TV it pushed the
+   oklch() red into pink/magenta. The brand red is now pinned in sRGB hex
+   (see :root above) so every screen renders the same, predictable red. */
 
 *,
 *::before,
