@@ -13,7 +13,7 @@ import { useScanner } from "../../lib/use-scanner";
 import { extractNumber, LAST_DIGITS } from "../../../shared/qms.ts";
 import "./staff.css";
 
-type Mode = "scan" | "ready";
+type Mode = "scan" | "manual" | "ready";
 
 export default function StaffScreen() {
   const { items, status, canUndo, lastError, scan, markReady, hold, collect, undo } =
@@ -86,8 +86,19 @@ export default function StaffScreen() {
     setEntry("");
   }, [entry, markReady, show]);
 
+  const submitManual = useCallback(async () => {
+    if (entry.length !== LAST_DIGITS) return;
+    const number = entry.padStart(LAST_DIGITS, "0");
+    setEntry(""); // clear up front so a slow round-trip can't be double-submitted
+    if (await scan(number)) show("ok", number, "now preparing");
+  }, [entry, scan, show]);
+
+  // Both keypad modes ("manual" and "ready") accept hardware-keyboard typing;
+  // only the submit action differs.
+  const keypadMode = mode === "manual" || mode === "ready";
   useEffect(() => {
-    if (mode !== "ready") return;
+    if (!keypadMode) return;
+    const submit = mode === "manual" ? submitManual : submitReady;
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
       if (target && (target.tagName === "INPUT" || target.isContentEditable)) return;
@@ -96,12 +107,12 @@ export default function StaffScreen() {
       } else if (event.key === "Backspace") {
         setEntry((prev) => prev.slice(0, -1));
       } else if (event.key === "Enter") {
-        submitReady();
+        void submit();
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [mode, submitReady]);
+  }, [mode, keypadMode, submitReady, submitManual]);
 
   const switchMode = (next: Mode) => {
     setMode(next);
@@ -159,7 +170,19 @@ export default function StaffScreen() {
           onClick={() => switchMode("scan")}
         >
           <span className="mode-label--full" aria-hidden="true">Scan to prepare</span>
-          <span className="mode-label--short" aria-hidden="true">Prepare</span>
+          <span className="mode-label--short" aria-hidden="true">Scan</span>
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={mode === "manual"}
+          aria-label="Manual Add Order"
+          className="staff__mode"
+          data-active={mode === "manual"}
+          onClick={() => switchMode("manual")}
+        >
+          <span className="mode-label--full" aria-hidden="true">Type to prepare</span>
+          <span className="mode-label--short" aria-hidden="true">Type</span>
         </button>
         <button
           type="button"
@@ -203,12 +226,15 @@ export default function StaffScreen() {
           ) : (
             <div className="ready">
               <p className="ready__label">Enter the order number</p>
+              {mode === "manual" && (
+                <p className="ready__hint">Adds the number to Preparing, the same as a scan.</p>
+              )}
               <DigitEntry value={entry} length={LAST_DIGITS} />
               <NumericKeypad
                 onDigit={(d) => setEntry((prev) => (prev + d).slice(-LAST_DIGITS))}
                 onBackspace={() => setEntry((prev) => prev.slice(0, -1))}
-                onSubmit={submitReady}
-                submitLabel="Serve"
+                onSubmit={mode === "manual" ? submitManual : submitReady}
+                submitLabel={mode === "manual" ? "Prepare" : "Serve"}
                 canSubmit={entry.length === LAST_DIGITS}
               />
             </div>

@@ -9,7 +9,7 @@
 /* --- Mode switch ------------------------------------------------------ */
 .staff__modes {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: var(--space-2);
   padding: var(--space-3) clamp(var(--space-3), 4vw, var(--space-6)) 0;
 }
@@ -120,6 +120,15 @@
   font-weight: var(--weight-medium);
   letter-spacing: 0.02em;
   color: var(--ink-soft);
+}
+
+.ready__hint {
+  margin: calc(var(--space-3) * -1) 0 0;
+  max-width: 28ch;
+  text-align: center;
+  font-size: 0.8125rem;
+  color: var(--ink-soft);
+  text-wrap: balance;
 }
 
 /* --- Live queue side panel ------------------------------------------- */
@@ -259,7 +268,9 @@
   }
 }
 
-@media (max-width: 280px) {
+/* Three tabs crowd sooner than two: switch to the short labels (Scan / Type /
+   Serve) before the full ones would ellipsize. */
+@media (max-width: 480px) {
   .mode-label--full {
     display: none;
   }
