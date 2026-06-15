@@ -8,3 +8,13 @@ createRoot(document.getElementById("root")!).render(
     <App />
   </StrictMode>,
 );
+
+// Register the service worker so the app installs as a PWA (fullscreen, no
+// browser bar). Only in production builds — the dev server doesn't serve sw.js.
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {
+      /* SW registration failed — app still works, just not installable offline */
+    });
+  });
+}
