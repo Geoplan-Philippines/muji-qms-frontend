@@ -38,9 +38,10 @@
   /* Pinned in sRGB hex so TV browsers render the exact same red instead of
      gamut-mapping an oklch() value into pink/magenta. Tune these two if the
      red still looks off on the wall display. */
-  --muji-red: #a82a26;
-  --muji-red-deep: #8c211d;
-  --muji-red-tint: #ffe6e5;
+  --muji-red: #7f0019;
+  --muji-red-deep: #5e0013;
+  --muji-red-tint: #ffe1e5;
+  
 
   /* All tokens pinned to sRGB hex (converted from their former oklch values).
      The wall-display TV browser doesn't support oklch(), so any background

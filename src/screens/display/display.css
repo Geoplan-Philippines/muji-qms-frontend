@@ -1,46 +1,48 @@
 .display {
   display: grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: 1fr auto;
   height: 100dvh;
   background: var(--canvas);
   overflow: hidden;
 }
 
-/* --- Header ----------------------------------------------------------- */
-.display__head {
+/* --- Bottom bar: brand mark (left) + date/time (right) ---------------- */
+.display__bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: var(--space-4);
-  padding: clamp(var(--space-1), 0.7vw, var(--space-3))
+  padding: clamp(var(--space-2), 1.1vw, var(--space-5))
     clamp(var(--space-6), 3vw, var(--space-12));
-  border-bottom: 1px solid var(--line);
-}
+  background: #fff;
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
+}c
 
 /* Brand mark, left. Override the component's em-based height with a viewport
    clamp tuned for the across-the-room display. */
-.display__head .muji-logo {
-  height: clamp(2rem, 3.4vw, 3.6rem);
+.display__bar .muji-logo {
+  height: clamp(2.6rem, 4vw, 4.8rem);
 }
 
 /* Date + time, grouped on the right. */
-.display__head-meta {
+.display__bar-meta {
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: clamp(var(--space-1), 0.3vw, var(--space-2));
+  gap: clamp(var(--space-1), 0.4vw, var(--space-2));
   line-height: 1;
 }
 
 .display__date {
-  font-size: clamp(0.7rem, 0.9vw, 1rem);
+  font-size: clamp(1rem, 1.5vw, 1.8rem);
   font-weight: var(--weight-medium);
   letter-spacing: 0.01em;
   color: var(--ink-soft);
 }
 
 .display__time {
-  font-size: clamp(1rem, 1.7vw, 1.7rem);
+  font-size: clamp(1.8rem, 3vw, 3.4rem);
   font-weight: var(--weight-bold);
   color: var(--muji-red);
   line-height: 1;
@@ -144,30 +146,6 @@
   margin: auto;
   font-size: clamp(1rem, 1.6vw, 1.6rem);
   color: var(--ink-soft);
-}
-
-/* --- Ad frame (full-width banner) ------------------------------------- */
-/* Boilerplate ad slot: one frame spanning the bottom of the screen.
-   Swap the inner content for ad creatives later — the frame stays. */
-.adframe {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: clamp(var(--space-3), 1.5vw, var(--space-6));
-  padding: clamp(var(--space-3), 1.6vw, var(--space-6))
-    clamp(var(--space-5), 3vw, var(--space-12));
-  background: #fff;
-  box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
-  text-align: center;
-}
-
-.adframe__lead {
-  margin: 0;
-  font-size: clamp(1rem, 1.7vw, 1.8rem);
-  font-weight: var(--weight-bold);
-  letter-spacing: -0.01em;
-  color: var(--muji-red);
 }
 
 /* --- Now Serving column (drenched) ------------------------------------ */

@@ -13,7 +13,7 @@ export function MujiLogo() {
       src={mujiLogo}
       alt="MUJI"
       width={1024}
-      height={1024}
+      height={430}
       decoding="async"
     />
   );

@@ -115,16 +115,6 @@ export default function DisplayScreen() {
 
   return (
     <div className="display">
-      <header className="display__head">
-        <MujiLogo />
-        <div className="display__head-meta">
-          <span className="display__date">{dateFmt.format(now)}</span>
-          <time className="display__time tnum" dateTime={now.toISOString()}>
-            {timeFmt.format(now)}
-          </time>
-        </div>
-      </header>
-
       <main className="board">
         <LayoutGroup>
           <section className="prep" aria-label="Preparing">
@@ -189,10 +179,15 @@ export default function DisplayScreen() {
         </LayoutGroup>
       </main>
 
-      {/* Full-width banner — ad slot boilerplate. Replace the inner content
-          with rotating ad creatives later; the frame/layout stays. */}
-      <footer className="adframe">
-        <p className="adframe__lead">Simple coffee, made with care.</p>
+      {/* Bottom bar — brand mark, left; date + time, right. */}
+      <footer className="display__bar">
+        <MujiLogo />
+        <div className="display__bar-meta">
+          <span className="display__date">{dateFmt.format(now)}</span>
+          <time className="display__time tnum" dateTime={now.toISOString()}>
+            {timeFmt.format(now)}
+          </time>
+        </div>
       </footer>
 
       <AnimatePresence>
