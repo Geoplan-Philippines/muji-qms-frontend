@@ -245,7 +245,7 @@ export default function TableScreen() {
                       aria-label={`Serve order ${item.number}, preparing ${waitLabel(item.since, nowMs)}`}
                     >
                       <span className="pool__num tnum">{item.number}</span>
-                      <span className="pool__wait">{waitLabel(item.since, nowMs)}</span>
+                      {/* <span className="pool__wait">{waitLabel(item.since, nowMs)}</span> */}
                     </button>
                   </motion.li>
                 ))}
