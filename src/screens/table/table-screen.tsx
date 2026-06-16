@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Bell, BellOff, Check, Clock, MoreHorizontal, Undo2 } from "lucide-react";
+import { Bell, BellOff, Check, Clock, Eye, EyeOff, MoreHorizontal, Undo2 } from "lucide-react";
 import { StationBar } from "../../components/station-bar";
 import { Flash } from "../../components/flash";
 import { useClock } from "../../lib/use-clock";
 import { useQueue } from "../../lib/use-queue";
 import { useFlash } from "../../lib/use-flash";
+import { useLogoVisible } from "../../lib/use-logo-visible";
 import { formatQueueError } from "../../lib/queue-errors";
 import { itemsToCsv } from "../../lib/queue-csv";
 import { EASE_OUT_QUINT } from "../../lib/motion";
@@ -43,6 +44,7 @@ export default function TableScreen() {
   } = useQueue();
   const now = useClock(1000);
   const { feedback, show } = useFlash();
+  const [logoVisible, setLogoVisible] = useLogoVisible();
 
   const [confirming, setConfirming] = useState<string | null>(null);
   const [clearOpen, setClearOpen] = useState(false);
@@ -186,6 +188,21 @@ export default function TableScreen() {
                 <MoreHorizontal size={18} aria-hidden="true" />
               </button>
               <div id="table-tools" popover="auto" className="tools__menu" aria-label="Board tools">
+                <button
+                  type="button"
+                  className="tools__item"
+                  popoverTarget="table-tools"
+                  popoverTargetAction="hide"
+                  onClick={() => setLogoVisible(!logoVisible)}
+                  aria-pressed={logoVisible}
+                >
+                  {logoVisible ? (
+                    <EyeOff size={16} aria-hidden="true" />
+                  ) : (
+                    <Eye size={16} aria-hidden="true" />
+                  )}
+                  {logoVisible ? "Hide display logo" : "Show display logo"}
+                </button>
                 <button
                   type="button"
                   className="tools__item"

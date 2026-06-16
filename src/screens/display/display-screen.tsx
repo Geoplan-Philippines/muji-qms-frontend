@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
 import { useClock } from "../../lib/use-clock";
 import { useQueue } from "../../lib/use-queue";
+import { useLogoVisible } from "../../lib/use-logo-visible";
 import { EASE_OUT_QUINT } from "../../lib/motion";
 import type { QueueItem } from "../../../shared/qms.ts";
 import { MujiLogo } from "../../components/muji-logo";
@@ -56,6 +57,7 @@ function playChime(ctx: AudioContext): void {
 export default function DisplayScreen() {
   const { items, status, chimeEnabled } = useQueue();
   const now = useClock(1000);
+  const [logoVisible] = useLogoVisible();
 
   const preparing = useMemo(
     () => items.filter((i) => i.status === "preparing").sort(byAge),
@@ -181,7 +183,7 @@ export default function DisplayScreen() {
 
       {/* Bottom bar — brand mark, left; date + time, right. */}
       <footer className="display__bar">
-        <MujiLogo />
+        {logoVisible && <MujiLogo />}
         <div className="display__bar-meta">
           <span className="display__date">{dateFmt.format(now)}</span>
           <time className="display__time tnum" dateTime={now.toISOString()}>
