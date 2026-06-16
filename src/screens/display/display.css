@@ -17,12 +17,13 @@
   background: #fff;
   border-top: 1px solid var(--line);
   box-shadow: 0 -2px 12px rgba(0, 0, 0, 0.06);
-}c
+}
 
 /* Brand mark, left. Override the component's em-based height with a viewport
-   clamp tuned for the across-the-room display. */
+   clamp tuned for the across-the-room display — sized to read from the floor,
+   a touch taller than the time on the right. */
 .display__bar .muji-logo {
-  height: clamp(2.6rem, 4vw, 4.8rem);
+  height: clamp(3.4rem, 5.5vw, 7rem);
 }
 
 /* Date + time, grouped on the right. */

@@ -30,18 +30,18 @@
 
 :root {
   /* --- Color: brand --------------------------------------------------- */
-  /* The one mark. Hue 21 is fixed ("same shade"); these values run brighter
-     and more saturated than before but hold lightness where white-on-red
-     buttons still clear AA. sRGB gamut-maps the chroma down to its ceiling;
-     wide-gamut screens (the wall-display TV, modern tablets) get the fuller,
-     more vivid red via the color-gamut: p3 block below. */
-  /* Pinned in sRGB hex so TV browsers render the exact same red instead of
-     gamut-mapping an oklch() value into pink/magenta. Tune these two if the
-     red still looks off on the wall display. */
-  --muji-red: #7f0019;
-  --muji-red-deep: #5e0013;
-  --muji-red-tint: #ffe1e5;
-  
+  /* Muji's mark, pinned in sRGB hex so every screen — including the
+     wall-display TV browser, which can't parse oklch() — renders the exact
+     same red instead of gamut-mapping it into pink/magenta. The ramp is
+     scaled from the brand red #862433 ≈ oklch(42% 0.132 16), holding hue and
+     reusing the prior steps' lightness/chroma deltas: -deep darkens it for
+     pressed/hover states, -tint is the pale wash behind served orders, and
+     --focus-ring (under roles below) runs a touch brighter so the ring
+     reads. Retune from the base hex if the red looks off on the wall display. */
+  --muji-red: #862433;       /* oklch(42% 0.132 16) — the one mark */
+  --muji-red-deep: #641d27;  /* L-7 C-.03 — pressed / hover */
+  --muji-red-tint: #fee1e6;  /* pale wash behind served orders */
+
 
   /* All tokens pinned to sRGB hex (converted from their former oklch values).
      The wall-display TV browser doesn't support oklch(), so any background
@@ -59,7 +59,7 @@
   --line: #e2dddb;
 
   /* --- Color: roles --------------------------------------------------- */
-  --focus-ring: #99001e;
+  --focus-ring: #a0293c;
   --accent-on: #fcf9f8;
 
   /* --- Typography ----------------------------------------------------- */
