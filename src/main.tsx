@@ -1,11 +1,20 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import { RouterProvider } from 'react-router'
-import './index.css'
-import { router } from './router'
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import App from "./app";
+import "./index.css";
 
-createRoot(document.getElementById('root')!).render(
+createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <App />
   </StrictMode>,
-)
+);
+
+// Register the service worker so the app installs as a PWA (fullscreen, no
+// browser bar). Only in production builds — the dev server doesn't serve sw.js.
+if (import.meta.env.PROD && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(() => {
+      /* SW registration failed — app still works, just not installable offline */
+    });
+  });
+}
