@@ -179,6 +179,10 @@
   min-height: 0;
   padding: var(--space-6);
   border-left: 1px solid var(--line);
+  /* The action rows below adapt to how wide this column actually is, not the
+     viewport — so they reflow correctly whether it sits beside the pool or
+     stacks beneath it. See the @container query further down. */
+  container: status / inline-size;
 }
 
 .status__inner {
@@ -363,6 +367,7 @@
 .holding__item {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: var(--space-2);
   padding: var(--space-2) var(--space-3);
   background: var(--surface);
@@ -694,6 +699,33 @@
   }
   .confirm {
     transform: none;
+  }
+}
+
+/* --- Narrow status column: stack actions under the order number ------ */
+/* Beside the pool the column is pinned to a ~22rem min, which cannot hold the
+   order number plus three labelled buttons on one line. Rather than let them
+   crowd and overlap, give the number its own row and lay the actions out
+   beneath it so each gets full-width tap room down to phone sizes. */
+@container status (max-width: 24rem) {
+  /* Served orders: the number claims the whole top row, buttons drop beneath. */
+  .serving__num {
+    flex: 1 1 100%;
+    margin-right: 0;
+  }
+  /* Held orders: number + wait share the top row (the wait grows to fill it,
+     which is what pushes the buttons onto their own row below). */
+  .holding__wait {
+    flex: 1 1 auto;
+  }
+  .serving__return,
+  .serving__hold,
+  .serving__collect,
+  .holding__serve,
+  .holding__collect {
+    flex: 1 1 0;
+    justify-content: center;
+    padding-inline: var(--space-2);
   }
 }
 
