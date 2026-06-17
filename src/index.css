@@ -33,14 +33,14 @@
   /* Muji's mark, pinned in sRGB hex so every screen — including the
      wall-display TV browser, which can't parse oklch() — renders the exact
      same red instead of gamut-mapping it into pink/magenta. The ramp is
-     scaled from the brand red #862433 ≈ oklch(42% 0.132 16), holding hue and
+     scaled from the brand red #79161C ≈ oklch(37.8% 0.133 24), holding hue and
      reusing the prior steps' lightness/chroma deltas: -deep darkens it for
      pressed/hover states, -tint is the pale wash behind served orders, and
      --focus-ring (under roles below) runs a touch brighter so the ring
      reads. Retune from the base hex if the red looks off on the wall display. */
-  --muji-red: #862433;       /* oklch(42% 0.132 16) — the one mark */
-  --muji-red-deep: #641d27;  /* L-7 C-.03 — pressed / hover */
-  --muji-red-tint: #fee1e6;  /* pale wash behind served orders */
+  --muji-red: #79161C;       /* oklch(37.8% 0.133 24) — the one mark */
+  --muji-red-deep: #591114;  /* L-7 C-.03 — pressed / hover */
+  --muji-red-tint: #ffe2df;  /* pale wash behind served orders */
 
 
   /* All tokens pinned to sRGB hex (converted from their former oklch values).
@@ -59,7 +59,7 @@
   --line: #e2dddb;
 
   /* --- Color: roles --------------------------------------------------- */
-  --focus-ring: #a0293c;
+  --focus-ring: #911821;
   --accent-on: #fcf9f8;
 
   /* --- Typography ----------------------------------------------------- */

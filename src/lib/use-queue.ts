@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { io, type Socket } from "socket.io-client";
-import { extractNumber, type QueueItem } from "../../shared/qms.ts";
+import { extractNumber, parseServerTime, type QueueItem } from "../../shared/qms.ts";
 
 const API_URL =
   ((import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8000").replace(
@@ -24,6 +24,8 @@ export interface QueueApi {
   canUndo: boolean;
   chimeEnabled: boolean;
   lastError: QueueError | null;
+  /** ms to add to the device clock to get the server's clock (0 until calibrated). */
+  clockOffset: number;
   scan: (raw: string) => Promise<boolean>;
   markReady: (number: string) => void;
   hold: (number: string) => void;
@@ -50,11 +52,11 @@ interface BackendOrder {
 function toItem(order: BackendOrder): QueueItem | null {
   switch (order.orderStatus) {
     case "PREPARING":
-      return { id: order.id, number: order.orderNumber, status: "preparing", since: new Date(order.createdAt).getTime() };
+      return { id: order.id, number: order.orderNumber, status: "preparing", since: parseServerTime(order.createdAt) };
     case "SERVING":
-      return { id: order.id, number: order.orderNumber, status: "ready", since: new Date(order.updatedAt).getTime() };
+      return { id: order.id, number: order.orderNumber, status: "ready", since: parseServerTime(order.updatedAt) };
     case "ON_HOLD":
-      return { id: order.id, number: order.orderNumber, status: "holding", since: new Date(order.updatedAt).getTime() };
+      return { id: order.id, number: order.orderNumber, status: "holding", since: parseServerTime(order.updatedAt) };
     default:
       return null; // SERVED (done/collected) and CANCELLED — remove from board
   }
@@ -114,6 +116,25 @@ export function useQueue(): QueueApi {
     itemsRef.current = items;
   }, [items]);
 
+  // Server-clock calibration. Wait-time ages are measured against this
+  // offset-corrected clock so every screen agrees even when a tablet's own clock
+  // is wrong — which matters offline, where devices can't NTP-sync. We learn the
+  // offset purely from the backend's own order timestamps: the createdAt /
+  // updatedAt that ride along on every order event, each ≈ "server now" at the
+  // moment it happened. Because the displayed age is then the difference between
+  // two values parsed the SAME way by parseServerTime, it stays correct no matter
+  // how the backend formats or zones its timestamps (any constant parse offset
+  // cancels). Until the first event the offset is 0 — i.e. the raw device clock.
+  const [clockOffset, setClockOffset] = useState(0);
+  const clockOffsetRef = useRef(0);
+  const calibrate = useCallback((serverNowMs: number) => {
+    if (!Number.isFinite(serverNowMs)) return;
+    const offset = serverNowMs - Date.now();
+    if (Math.abs(offset - clockOffsetRef.current) < 1000) return; // ignore sub-second jitter
+    clockOffsetRef.current = offset;
+    setClockOffset(offset);
+  }, []);
+
   useEffect(() => {
     const socket: Socket = io(`${API_URL}/orders`, {
       transports: ["polling", "websocket"], // polling first so HTTP handshake establishes session before WS upgrade
@@ -155,6 +176,7 @@ export function useQueue(): QueueApi {
 
     socket.on("order:created", (order: BackendOrder) => {
       console.log("[qms] order:created", order);
+      calibrate(parseServerTime(order.createdAt));
       const item = toItem(order);
       if (!item) return;
       setItems((prev) => (prev.some((i) => i.id === item.id) ? prev : [...prev, item]));
@@ -162,6 +184,7 @@ export function useQueue(): QueueApi {
 
     socket.on("order:status-updated", (order: BackendOrder) => {
       console.log("[qms] order:status-updated", order);
+      calibrate(parseServerTime(order.updatedAt));
       const item = toItem(order);
       if (!item) {
         setItems((prev) => prev.filter((i) => i.id !== order.id));
@@ -262,6 +285,7 @@ export function useQueue(): QueueApi {
     canUndo: false,
     chimeEnabled,
     lastError,
+    clockOffset,
     scan,
     markReady,
     hold,

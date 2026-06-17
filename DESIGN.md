@@ -2,9 +2,9 @@
 name: muji-qms
 description: Queue management for a Muji coffeeshop — ink on paper-white, one red mark, numbers as the interface.
 colors:
-  muji-red: "oklch(42% 0.132 16)"
-  muji-red-deep: "oklch(35% 0.102 16)"
-  muji-red-tint: "oklch(93.5% 0.033 16)"
+  muji-red: "oklch(37.8% 0.133 24)"
+  muji-red-deep: "oklch(30.8% 0.103 24)"
+  muji-red-tint: "oklch(93.5% 0.033 24)"
   ink: "oklch(26% 0.006 40)"
   ink-soft: "oklch(47% 0.012 40)"
   ink-faint: "oklch(62% 0.012 40)"
@@ -110,9 +110,9 @@ This system explicitly rejects three things. It is **not a loud fast-food menu b
 A near-monochrome neutral field warmed a hair toward hue 40, pierced by a single saturated red. The restraint everywhere else is what makes the red legible.
 
 ### Primary
-- **Muji Red** (`oklch(42% 0.132 16)`, `#862433`): The one and only accent — Muji's red, a deep muted maroon held firmly on the red side of its hue so it never drifts pink or coral. Marks the live, the actionable, and the "now serving": ready-state numbers on the wall board, the active mode-tab underline, the connection-trouble pulse, the serve/collect checks. Nothing decorative is ever allowed to borrow it. Pinned in sRGB hex so every screen — including the wall-display TV, whose browser can't parse `oklch()` — renders the exact same red rather than gamut-mapping it toward pink/magenta.
-- **Muji Red Deep** (`oklch(35% 0.102 16)`, `#641d27`): The pressed/emphasis shade — the base red darkened. Backs button and chip active states, and sets the "Now Serving" column title where the lighter red would vibrate against large type. The focus ring runs the other way, a touch brighter (`oklch(47% 0.154 16)`, `#a0293c`), so it reads against the page.
-- **Muji Red Tint** (`oklch(93.5% 0.033 16)`, `#fee1e6`): The faintest red wash. Backs the "Now Serving" column and ready chips so served orders read as a warm zone, not just red text on white.
+- **Muji Red** (`oklch(37.8% 0.133 24)`, `#79161C`): The one and only accent — Muji's red, a deep muted maroon held firmly on the red side of its hue so it never drifts pink or coral. Marks the live, the actionable, and the "now serving": ready-state numbers on the wall board, the active mode-tab underline, the connection-trouble pulse, the serve/collect checks. Nothing decorative is ever allowed to borrow it. Pinned in sRGB hex so every screen — including the wall-display TV, whose browser can't parse `oklch()` — renders the exact same red rather than gamut-mapping it toward pink/magenta.
+- **Muji Red Deep** (`oklch(30.8% 0.103 24)`, `#591114`): The pressed/emphasis shade — the base red darkened. Backs button and chip active states, and sets the "Now Serving" column title where the lighter red would vibrate against large type. The focus ring runs the other way, a touch brighter (`oklch(42.8% 0.155 24)`, `#911821`), so it reads against the page.
+- **Muji Red Tint** (`oklch(93.5% 0.033 24)`, `#ffe2df`): The faintest red wash. Backs the "Now Serving" column and ready chips so served orders read as a warm zone, not just red text on white.
 
 ### Neutral
 - **Ink** (`oklch(26% 0.006 40)`): Primary text and the PREPARING queue numbers. Near-black, faintly warm.

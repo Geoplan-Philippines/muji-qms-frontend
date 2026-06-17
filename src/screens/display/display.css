@@ -70,7 +70,7 @@
   margin: 0;
   font-size: clamp(3.6rem, 4.6vw, 6.6rem);
   font-weight: var(--weight-bold);
-  letter-spacing: 0.1em;
+  letter-spacing: 0.02em;
   line-height: 1;
   text-transform: uppercase;
   white-space: nowrap;

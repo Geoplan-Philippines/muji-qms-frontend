@@ -145,7 +145,9 @@ export default function StaffScreen() {
     [collect, show],
   );
 
-  const preparing = items.filter((i) => i.status === "preparing");
+  const preparing = items
+    .filter((i) => i.status === "preparing")
+    .sort((a, b) => a.since - b.since); // oldest first, so the list reads in arrival order
   const ready = items.filter((i) => i.status === "ready");
   const holding = items.filter((i) => i.status === "holding");
 
@@ -248,6 +250,7 @@ export default function StaffScreen() {
             <h2 className="queue__title">
               Preparing <span className="queue__count">{preparing.length}</span>
             </h2>
+            {preparing.length > 1 && <p className="queue__hint">Oldest first</p>}
             <ul className="queue__list">
               {preparing.length === 0 && <li className="queue__empty">None</li>}
               {preparing.map((i) => (

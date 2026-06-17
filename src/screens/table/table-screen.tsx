@@ -10,21 +10,13 @@ import { useLogoVisible } from "../../lib/use-logo-visible";
 import { formatQueueError } from "../../lib/queue-errors";
 import { itemsToCsv } from "../../lib/queue-csv";
 import { EASE_OUT_QUINT } from "../../lib/motion";
-import { type QueueItem } from "../../../shared/qms.ts";
+import { type QueueItem, waitLabel } from "../../../shared/qms.ts";
 import "./table.css";
 
 const TILE = { duration: 0.32, ease: EASE_OUT_QUINT };
 
 function byAge(a: QueueItem, b: QueueItem): number {
   return a.since - b.since;
-}
-
-function waitLabel(since: number, now: number): string {
-  const mins = Math.floor((now - since) / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m`;
-  const hrs = Math.floor(mins / 60);
-  return `${hrs}h ${mins % 60}m`;
 }
 
 export default function TableScreen() {
@@ -34,6 +26,7 @@ export default function TableScreen() {
     canUndo,
     lastError,
     chimeEnabled,
+    clockOffset,
     markReady,
     hold,
     collect,
@@ -151,7 +144,9 @@ export default function TableScreen() {
     setChime(!chimeEnabled);
   }, [chimeEnabled, setChime]);
 
-  const nowMs = now.getTime();
+  // Offset-corrected "now" so wait times count from the server's clock, not this
+  // device's — keeps every screen in agreement even with a drifted tablet clock.
+  const nowMs = now.getTime() + clockOffset;
 
   return (
     <div className="table">
@@ -236,7 +231,7 @@ export default function TableScreen() {
             <span className="pool__count tnum" aria-label={`${preparing.length} orders`}>
               {preparing.length}
             </span>
-            <p className="pool__hint">Tap an order to serve it</p>
+            <p className="pool__hint">Tap to serve · oldest first</p>
           </header>
 
           {preparing.length === 0 ? (
@@ -244,7 +239,10 @@ export default function TableScreen() {
           ) : (
             <ul className="pool__grid">
               <AnimatePresence mode="popLayout" initial={false}>
-                {preparing.map((item) => (
+                {preparing.map((item, index) => {
+                  const wait = waitLabel(item.since, nowMs);
+                  const isNext = index === 0;
+                  return (
                   <motion.li
                     key={item.number}
                     layout
@@ -257,15 +255,18 @@ export default function TableScreen() {
                       type="button"
                       className="pool__tile"
                       data-selected={item.number === confirming}
+                      data-next={isNext}
                       aria-haspopup="dialog"
                       onClick={() => setConfirming(item.number)}
-                      aria-label={`Serve order ${item.number}, preparing ${waitLabel(item.since, nowMs)}`}
+                      aria-label={`Serve order ${item.number}, waiting ${wait}${isNext ? ", oldest — serve next" : ""}`}
                     >
+                      {isNext && <span className="pool__next" aria-hidden="true">Next</span>}
                       <span className="pool__num tnum">{item.number}</span>
-                      {/* <span className="pool__wait">{waitLabel(item.since, nowMs)}</span> */}
+                      <span className="pool__wait">{wait}</span>
                     </button>
                   </motion.li>
-                ))}
+                  );
+                })}
               </AnimatePresence>
             </ul>
           )}

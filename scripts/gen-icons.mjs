@@ -14,7 +14,7 @@ const OUT = join(dirname(fileURLToPath(import.meta.url)), "..", "public", "icons
 mkdirSync(OUT, { recursive: true });
 
 // Brand red — keep in sync with --muji-red in src/index.css.
-const RED = [0x7f, 0x00, 0x19];
+const RED = [0x79, 0x16, 0x1c];
 const WHITE = [0xff, 0xff, 0xff];
 
 // 5x7 block glyphs for the only letters we need.

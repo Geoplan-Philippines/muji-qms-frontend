@@ -83,6 +83,7 @@
 }
 
 .pool__tile {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -109,6 +110,36 @@
 .pool__tile:active {
   transform: scale(0.97);
   background: var(--surface-sunken);
+}
+
+/* Oldest preparing order = the one to serve next. The cue is carried by three
+   things, not color alone: it sorts first, wears a "Next" label, and takes a
+   faint red wash + warmed border. The stronger filled red is reserved for the
+   tapped/confirming state below, which wins when a tile is both. */
+.pool__tile[data-next="true"] {
+  background: color-mix(in oklch, var(--muji-red-tint) 35%, var(--surface));
+  border-color: color-mix(in oklch, var(--muji-red) 45%, var(--line));
+}
+
+.pool__tile[data-next="true"] .pool__wait {
+  color: var(--muji-red);
+  font-weight: var(--weight-semibold);
+}
+
+.pool__next {
+  position: absolute;
+  top: var(--space-2);
+  inset-inline: 0;
+  width: max-content;
+  margin-inline: auto;
+  padding: 1px var(--space-2);
+  font-size: 0.625rem;
+  font-weight: var(--weight-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-on);
+  background: var(--muji-red);
+  border-radius: 999px;
 }
 
 .pool__tile[data-selected="true"] {
@@ -451,7 +482,11 @@
   inset: auto;
   top: 3.25rem;
   right: var(--space-6);
-  display: flex;
+  /* Closed popover stays display:none so it is neither visible nor clickable.
+     Author CSS overrides the UA `[popover]:not(:popover-open)` rule, so this
+     must be set explicitly — otherwise the invisible menu overlays the order
+     tiles and steals taps (hitting Export / Clear queue). */
+  display: none;
   flex-direction: column;
   gap: var(--space-1);
   width: 12rem;
@@ -471,6 +506,7 @@
 }
 
 .tools__menu:popover-open {
+  display: flex;
   opacity: 1;
   transform: translateY(0);
 }
