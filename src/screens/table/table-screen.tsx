@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Bell, BellOff, Check, Clock, Eye, EyeOff, MoreHorizontal, Undo2 } from "lucide-react";
+import { Bell, BellOff, BellRing, Check, Clock, Eye, EyeOff, MoreHorizontal, Undo2 } from "lucide-react";
 import { StationBar } from "../../components/station-bar";
 import { Flash } from "../../components/flash";
 import { useClock } from "../../lib/use-clock";
@@ -33,6 +33,7 @@ export default function TableScreen() {
     unready,
     clear,
     setChime,
+    requestChime,
     undo,
   } = useQueue();
   const now = useClock(1000);
@@ -144,6 +145,11 @@ export default function TableScreen() {
     setChime(!chimeEnabled);
   }, [chimeEnabled, setChime]);
 
+  const handleReplayChime = useCallback(() => {
+    requestChime();
+    show("ok", null, "chime sent to display");
+  }, [requestChime, show]);
+
   // Offset-corrected "now" so wait times count from the server's clock, not this
   // device's — keeps every screen in agreement even with a drifted tablet clock.
   const nowMs = now.getTime() + clockOffset;
@@ -171,6 +177,15 @@ export default function TableScreen() {
               ) : (
                 <BellOff size={18} aria-hidden="true" />
               )}
+            </button>
+            <button
+              type="button"
+              className="chime-replay"
+              onClick={handleReplayChime}
+              title="Sound chime on the display to notify customers"
+              aria-label="Sound chime on the display to notify customers"
+            >
+              <BellRing size={18} aria-hidden="true" />
             </button>
             <div className="tools">
               <button

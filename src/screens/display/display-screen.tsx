@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { AnimatePresence, LayoutGroup, motion } from "motion/react";
+import { useChime } from "../../lib/use-chime";
 import { useClock } from "../../lib/use-clock";
 import { useQueue } from "../../lib/use-queue";
 import { useLogoVisible } from "../../lib/use-logo-visible";
@@ -32,30 +33,8 @@ function preparingDensity(count: number): "xl" | "lg" | "md" | "sm" {
   return "sm"; // 4 columns
 }
 
-function playChime(ctx: AudioContext): void {
-  const t = ctx.currentTime;
-  (
-    [
-      [880, 0, 0.28],
-      [1174.66, 0.22, 0.22],
-    ] as [number, number, number][]
-  ).forEach(([freq, delay, vol]) => {
-    const osc = ctx.createOscillator();
-    const env = ctx.createGain();
-    osc.connect(env);
-    env.connect(ctx.destination);
-    osc.type = "triangle";
-    osc.frequency.value = freq;
-    env.gain.setValueAtTime(0, t + delay);
-    env.gain.linearRampToValueAtTime(vol, t + delay + 0.01);
-    env.gain.exponentialRampToValueAtTime(0.001, t + delay + 1.6);
-    osc.start(t + delay);
-    osc.stop(t + delay + 1.6);
-  });
-}
-
 export default function DisplayScreen() {
-  const { items, status, chimeEnabled } = useQueue();
+  const { items, status, chimeEnabled, chimeSignal } = useQueue();
   const now = useClock(1000);
   const [logoVisible] = useLogoVisible();
 
@@ -68,41 +47,8 @@ export default function DisplayScreen() {
     [items],
   );
 
-  const audioCtxRef = useRef<AudioContext | null>(null);
   const prevReadyRef = useRef<Set<string> | null>(null);
-
-  const triggerChime = useCallback(() => {
-    try {
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new AudioContext();
-      }
-      const ctx = audioCtxRef.current;
-      if (ctx.state === "suspended") {
-        void ctx.resume().then(() => playChime(ctx));
-      } else {
-        playChime(ctx);
-      }
-    } catch {
-      /* AudioContext unavailable */
-    }
-  }, []);
-
-  useEffect(() => {
-    const unlock = () => {
-      try {
-        if (!audioCtxRef.current) audioCtxRef.current = new AudioContext();
-        void audioCtxRef.current.resume();
-      } catch {
-        /* AudioContext unavailable */
-      }
-    };
-    window.addEventListener("pointerdown", unlock, { once: true });
-    window.addEventListener("keydown", unlock, { once: true });
-    return () => {
-      window.removeEventListener("pointerdown", unlock);
-      window.removeEventListener("keydown", unlock);
-    };
-  }, []);
+  const triggerChime = useChime();
 
   useEffect(() => {
     const currentIds = new Set(ready.map((i) => i.number));
@@ -114,6 +60,18 @@ export default function DisplayScreen() {
     prevReadyRef.current = currentIds;
     if (hasNew && chimeEnabled) triggerChime();
   }, [ready, chimeEnabled, triggerChime]);
+
+  // Remote replay: a tablet pressed the "notify customers" button. This is a
+  // deliberate staff action, so it sounds even when the auto serve-chime is
+  // muted. chimeSignal starts at 0; skip that initial render.
+  const firstSignalRef = useRef(true);
+  useEffect(() => {
+    if (firstSignalRef.current) {
+      firstSignalRef.current = false;
+      return;
+    }
+    triggerChime();
+  }, [chimeSignal, triggerChime]);
 
   return (
     <div className="display">

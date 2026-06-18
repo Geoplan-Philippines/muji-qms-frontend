@@ -4,6 +4,10 @@
   height: 100dvh;
   background: var(--canvas);
   overflow: hidden;
+  /* Respect rounded corners / notches when running full-screen as a kiosk or
+     installed PWA. Resolves to 0 on devices without insets. */
+  padding-inline: env(safe-area-inset-left, 0) env(safe-area-inset-right, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
 /* Shorter header on the table screen only (leaves the Counter screen as-is). */
@@ -17,9 +21,13 @@
 
 .table__main {
   display: grid;
-  grid-template-columns: minmax(0, 1.4fr) minmax(22rem, 1fr);
+  /* Status column floor scales with the viewport so the two-pane layout still
+     fits smaller landscape tablets (~1024px) without crushing the pool, while
+     keeping its roomy 22rem on desktop. */
+  grid-template-columns: minmax(0, 1.4fr) minmax(clamp(18rem, 26vw, 22rem), 1fr);
   grid-template-areas: "pool status";
   min-height: 0;
+  min-width: 0;
 }
 
 .pool {
@@ -36,6 +44,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
   padding: var(--space-6);
 }
 
@@ -70,7 +79,10 @@
   min-height: 0;
   overflow-y: auto;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr));
+  /* Fluid tile floor: the auto-fill column width scales with the viewport
+     (≈6rem on phones → 7.5rem on large screens) so the grid reflows smoothly
+     at every size instead of snapping at a single breakpoint. */
+  grid-template-columns: repeat(auto-fill, minmax(clamp(6rem, 13vw, 7.5rem), 1fr));
   align-content: start;
   gap: var(--space-4);
   margin: 0;
@@ -177,6 +189,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  min-width: 0;
   padding: var(--space-6);
   border-left: 1px solid var(--line);
   /* The action rows below adapt to how wide this column actually is, not the
@@ -447,6 +460,7 @@
 /* --- Icon controls: chime toggle + board-tools trigger -------------- */
 /* One shared square-icon vocabulary so the top-bar controls read as a set. */
 .chime-toggle,
+.chime-replay,
 .tools__trigger {
   display: inline-flex;
   align-items: center;
@@ -463,9 +477,17 @@
 }
 
 .chime-toggle:hover,
+.chime-replay:hover,
 .tools__trigger:hover {
   background: var(--surface-sunken);
   color: var(--ink);
+}
+
+/* Brief press feedback so staff see the chime fire even where it's hard to hear. */
+.chime-replay:active {
+  background: var(--surface-sunken);
+  color: var(--ink);
+  transform: scale(0.94);
 }
 
 /* Chime muted state: faint icon when the serve chime is off. */
@@ -729,11 +751,15 @@
   }
 }
 
-/* --- Stacked layout (portrait tablet / phone) ----------------------- */
-@media (max-width: 860px) {
+/* --- Stacked layout (portrait tablets & narrower) ------------------- */
+/* Below the two-pane width there isn't room for the pool and status side by
+   side, so stack them into independently scrolling rows. This catches every
+   portrait tablet (iPad 768–834, 7–8" Android) on down to phones. The pool
+   keeps a slightly taller share since it's the primary "tap to serve" stage. */
+@media (max-width: 900px) {
   .table__main {
     grid-template-columns: 1fr;
-    grid-template-rows: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1.3fr) minmax(0, 1fr);
     grid-template-areas:
       "pool"
       "status";
@@ -745,19 +771,60 @@
   }
 }
 
-@media (max-width: 520px) {
+/* --- Large phones / small portrait tablets -------------------------- */
+@media (max-width: 600px) {
   .pool,
   .status {
     padding: var(--space-4);
-  }
-  .pool__grid {
-    grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr));
-    gap: var(--space-3);
   }
   .pool__hint {
     display: none;
   }
   .tools__menu {
     right: var(--space-4);
+  }
+}
+
+/* --- Small phones --------------------------------------------------- */
+@media (max-width: 380px) {
+  .pool,
+  .status {
+    padding: var(--space-3);
+  }
+  .pool__grid {
+    gap: var(--space-3);
+  }
+}
+
+/* --- Short viewports (landscape phones, squat tablet windows) -------- */
+/* When height is the constraint, trim vertical padding so the order tiles and
+   action lists keep as much room as possible. */
+@media (max-height: 560px) {
+  .pool,
+  .status {
+    padding-block: var(--space-3);
+  }
+  .pool__head {
+    padding-bottom: var(--space-2);
+  }
+}
+
+/* --- Touch devices: comfortable ≥44px tap targets ------------------- */
+/* Tablets and phones use a coarse pointer; bump the smaller controls so every
+   action clears the recommended 44px touch minimum without affecting the
+   tighter mouse layout on desktop. */
+@media (pointer: coarse) {
+  .serving__return,
+  .serving__hold,
+  .serving__collect,
+  .holding__serve,
+  .holding__collect {
+    min-height: 2.75rem;
+  }
+  .chime-toggle,
+  .chime-replay,
+  .tools__trigger {
+    width: 2.75rem;
+    height: 2.75rem;
   }
 }

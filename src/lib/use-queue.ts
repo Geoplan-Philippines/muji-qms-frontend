@@ -23,6 +23,8 @@ export interface QueueApi {
   status: ConnectionStatus;
   canUndo: boolean;
   chimeEnabled: boolean;
+  /** Bumps each time the store's display is asked to replay the chime (remote). */
+  chimeSignal: number;
   lastError: QueueError | null;
   /** ms to add to the device clock to get the server's clock (0 until calibrated). */
   clockOffset: number;
@@ -34,6 +36,8 @@ export interface QueueApi {
   clear: () => void;
   importItems: (items: QueueItem[]) => void;
   setChime: (on: boolean) => void;
+  /** Ask every display in this store to sound the serve chime now. */
+  requestChime: () => void;
   undo: () => void;
   clearError: () => void;
 }
@@ -110,7 +114,9 @@ export function useQueue(): QueueApi {
   const [chimeEnabled, setChimeEnabled] = useState(
     () => localStorage.getItem(CHIME_KEY) !== "false",
   );
+  const [chimeSignal, setChimeSignal] = useState(0);
 
+  const socketRef = useRef<Socket | null>(null);
   const itemsRef = useRef<QueueItem[]>([]);
   useEffect(() => {
     itemsRef.current = items;
@@ -141,6 +147,7 @@ export function useQueue(): QueueApi {
       reconnectionDelay: 500,
       reconnectionDelayMax: 5000,
     });
+    socketRef.current = socket;
 
     socket.on("connect", () => {
       console.log("[qms] socket connected, id:", socket.id);
@@ -182,6 +189,13 @@ export function useQueue(): QueueApi {
       setItems((prev) => (prev.some((i) => i.id === item.id) ? prev : [...prev, item]));
     });
 
+    // A tablet asked the store's displays to re-sound the chime. Bump a counter
+    // so the display screen can react; the value itself is meaningless.
+    socket.on("chime:play", () => {
+      console.log("[qms] chime:play");
+      setChimeSignal((n) => n + 1);
+    });
+
     socket.on("order:status-updated", (order: BackendOrder) => {
       console.log("[qms] order:status-updated", order);
       calibrate(parseServerTime(order.updatedAt));
@@ -201,6 +215,7 @@ export function useQueue(): QueueApi {
 
     return () => {
       socket.disconnect();
+      socketRef.current = null;
     };
   }, []);
 
@@ -273,6 +288,10 @@ export function useQueue(): QueueApi {
     localStorage.setItem(CHIME_KEY, String(on));
   }, []);
 
+  const requestChime = useCallback(() => {
+    socketRef.current?.emit("chime:replay", { storeId: STORE_ID });
+  }, []);
+
   const undo = useCallback(() => {
     // No backend undo support.
   }, []);
@@ -284,6 +303,7 @@ export function useQueue(): QueueApi {
     status: connStatus,
     canUndo: false,
     chimeEnabled,
+    chimeSignal,
     lastError,
     clockOffset,
     scan,
@@ -294,6 +314,7 @@ export function useQueue(): QueueApi {
     clear,
     importItems,
     setChime,
+    requestChime,
     undo,
     clearError,
   };
