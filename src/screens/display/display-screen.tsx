@@ -12,7 +12,11 @@ import "./display.css";
 const MOVE = { duration: 0.5, ease: EASE_OUT_QUINT };
 const ENTER = { duration: 0.4, ease: EASE_OUT_QUINT };
 
-const timeFmt = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit" });
+const timeFmt = new Intl.DateTimeFormat("en-US", {
+  hour: "numeric",
+  minute: "2-digit",
+  hour12: true,
+});
 const dateFmt = new Intl.DateTimeFormat("en-GB", {
   weekday: "long",
   day: "numeric",
@@ -34,8 +38,8 @@ function preparingDensity(count: number): "xl" | "lg" | "md" | "sm" {
 }
 
 export default function DisplayScreen() {
-  const { items, status, chimeEnabled, chimeSignal } = useQueue();
-  const now = useClock(1000);
+  const { items, status, chimeEnabled, chimeSignal, clockOffset } = useQueue();
+  const now = useClock(1000, clockOffset);
   const [logoVisible] = useLogoVisible();
 
   const preparing = useMemo(
@@ -139,9 +143,15 @@ export default function DisplayScreen() {
         </LayoutGroup>
       </main>
 
-      {/* Bottom bar — brand mark, left; date + time, right. */}
+      {/* Bottom bar — brand mark, left; safety notice, center; date + time, right. */}
       <footer className="display__bar">
         {logoVisible && <MujiLogo />}
+        {/* Safety notice — quiet ink, never red. One copy scrolls across. */}
+        <div className="display__notice">
+          <span className="display__notice-text">
+            Do not leave your things unattended
+          </span>
+        </div>
         <div className="display__bar-meta">
           <span className="display__date">{dateFmt.format(now)}</span>
           <time className="display__time tnum" dateTime={now.toISOString()}>
@@ -167,3 +177,5 @@ export default function DisplayScreen() {
     </div>
   );
 }
+
+

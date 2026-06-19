@@ -149,9 +149,20 @@ export function useQueue(): QueueApi {
     });
     socketRef.current = socket;
 
+    // Server clock sync. The backend emits its own clock on connect and on
+    // request; we learn the offset from it so the display shows the LAN server's
+    // time even when the device (TV) clock is wrong — no internet/NTP needed.
+    socket.on("time:sync", (data: { now?: number }) => {
+      if (typeof data?.now === "number") calibrate(data.now);
+    });
+    const timeResyncId = window.setInterval(() => {
+      socket.emit("time:request");
+    }, 60_000);
+
     socket.on("connect", () => {
       console.log("[qms] socket connected, id:", socket.id);
       setConnStatus("online");
+      socket.emit("time:request");
       if (STORE_ID) {
         console.log("[qms] joining store room:", STORE_ID);
         socket.emit("join-store", { storeId: STORE_ID });
@@ -214,6 +225,7 @@ export function useQueue(): QueueApi {
     });
 
     return () => {
+      window.clearInterval(timeResyncId);
       socket.disconnect();
       socketRef.current = null;
     };
