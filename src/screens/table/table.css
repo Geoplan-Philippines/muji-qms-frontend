@@ -1,6 +1,9 @@
 .table {
   display: grid;
-  grid-template-rows: auto 1fr;
+  /* status bar (readouts) · the live board · a persistent control dock. The
+     dock sits in the thumb zone so a standing operator reaches every control
+     one-handed, and keeps the board itself free of chrome. */
+  grid-template-rows: auto 1fr auto;
   height: 100dvh;
   background: var(--canvas);
   overflow: hidden;
@@ -172,10 +175,54 @@
 }
 
 .pool__wait {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
   font-size: 0.8125rem;
   font-weight: var(--weight-medium);
   color: var(--ink-soft);
   font-variant-numeric: tabular-nums;
+}
+
+.pool__wait-icon {
+  color: var(--ink-faint);
+}
+
+.pool__tile[data-next="true"] .pool__wait-icon {
+  color: var(--muji-red);
+}
+
+/* Aging bar: a hairline that fills toward the overdue horizon, pinned along the
+   tile's bottom edge so a long row of tiles reads as a small bar chart of who
+   has waited longest. Tonal by default; only the "next" tile borrows red, so
+   the one mark still points at a single order. */
+.pool__age {
+  position: absolute;
+  inset-inline: var(--space-3);
+  bottom: var(--space-2);
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: color-mix(in oklch, var(--line) 70%, transparent);
+  overflow: hidden;
+}
+
+.pool__age-fill {
+  display: block;
+  height: 100%;
+  transform-origin: left center;
+  border-radius: inherit;
+  background: var(--ink-faint);
+  transition: transform var(--dur-base) var(--ease-out-quint);
+}
+
+.pool__tile[data-next="true"] .pool__age-fill {
+  background: var(--muji-red);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pool__age-fill {
+    transition: none;
+  }
 }
 
 .pool__empty {
@@ -457,18 +504,19 @@
   transform: scale(0.96);
 }
 
-/* --- Icon controls: chime toggle + board-tools trigger -------------- */
-/* One shared square-icon vocabulary so the top-bar controls read as a set. */
-.chime-toggle,
-.chime-replay,
-.tools__trigger {
+/* View-all toggle: keeps a long "serve later" pile collapsed to a scannable few
+   without hiding the count. Quiet, full-width, centered. */
+.holding__more {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
+  gap: var(--space-1);
+  min-height: 2.5rem;
+  margin-top: var(--space-1);
+  font-size: 0.8125rem;
+  font-weight: var(--weight-medium);
   color: var(--ink-soft);
-  background: var(--surface);
+  background: transparent;
   border: 1px solid var(--line);
   border-radius: var(--radius-md);
   transition:
@@ -476,26 +524,102 @@
     color var(--dur-fast) var(--ease-standard);
 }
 
-.chime-toggle:hover,
-.chime-replay:hover,
-.tools__trigger:hover {
-  background: var(--surface-sunken);
+.holding__more:hover {
+  background: var(--surface);
   color: var(--ink);
+}
+
+.holding__more-icon {
+  transition: transform var(--dur-base) var(--ease-out-quint);
+}
+
+.holding__more-icon[data-open="true"] {
+  transform: rotate(180deg);
+}
+
+/* --- Bottom control dock ------------------------------------------- */
+/* The persistent control surface: chime on the left where the operator's hand
+   rests, rarely-used + destructive tools tucked under "More" on the right. The
+   board above stays free of chrome. */
+.dock {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-6);
+  background: var(--canvas);
+  border-top: 1px solid var(--line);
+}
+
+.dock__group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* Sound chime: the dock's lead action — sized and weighted to be unmistakable,
+   but tonal, not red. Red stays reserved for queue state (serve / collect /
+   next); announcing is not a queue mutation. */
+.dock__chime {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 3rem;
+  padding: 0 var(--space-5);
+  font-size: 1rem;
+  font-weight: var(--weight-semibold);
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-md);
+  transition:
+    background var(--dur-fast) var(--ease-standard),
+    border-color var(--dur-fast) var(--ease-standard),
+    transform var(--dur-fast) var(--ease-out-quint);
+}
+
+.dock__chime:hover {
+  background: var(--surface-sunken);
+  border-color: var(--ink-faint);
 }
 
 /* Brief press feedback so staff see the chime fire even where it's hard to hear. */
-.chime-replay:active {
+.dock__chime:active {
+  transform: scale(0.97);
   background: var(--surface-sunken);
-  color: var(--ink);
-  transform: scale(0.94);
 }
 
-/* Chime muted state: faint icon when the serve chime is off. */
-.chime-toggle[aria-pressed="false"] {
+/* Mute toggle: a quiet companion. Faint when off so the muted state reads at a
+   glance without color. */
+.dock__mute,
+.dock__tools {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 3rem;
+  padding: 0 var(--space-4);
+  font-size: 0.9rem;
+  font-weight: var(--weight-medium);
+  color: var(--ink-soft);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-md);
+  transition:
+    background var(--dur-fast) var(--ease-standard),
+    color var(--dur-fast) var(--ease-standard);
+}
+
+.dock__mute:hover,
+.dock__tools:hover {
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.dock__mute[aria-pressed="false"] {
   color: var(--ink-faint);
 }
 
-.chime-toggle[aria-pressed="false"]:hover {
+.dock__mute[aria-pressed="false"]:hover {
   color: var(--ink-soft);
 }
 
@@ -507,7 +631,8 @@
 .tools__menu {
   position: fixed;
   inset: auto;
-  top: 3.25rem;
+  /* Opens upward, anchored above the dock, so it never covers the board. */
+  bottom: 4.5rem;
   right: var(--space-6);
   /* Closed popover stays display:none so it is neither visible nor clickable.
      Author CSS overrides the UA `[popover]:not(:popover-open)` rule, so this
@@ -524,7 +649,7 @@
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-ambient);
   opacity: 0;
-  transform: translateY(-4px);
+  transform: translateY(4px);
   transition:
     opacity var(--dur-fast) var(--ease-out-quint),
     transform var(--dur-fast) var(--ease-out-quint),
@@ -541,7 +666,7 @@
 @starting-style {
   .tools__menu:popover-open {
     opacity: 0;
-    transform: translateY(-4px);
+    transform: translateY(4px);
   }
 }
 
@@ -571,12 +696,24 @@
   cursor: not-allowed;
 }
 
+/* Hairline between everyday tools and the destructive one, so Clear queue sits
+   visibly apart and isn't tapped by reflex. */
+.tools__sep {
+  height: 1px;
+  margin: var(--space-1) calc(var(--space-1) * -1);
+  background: var(--line);
+}
+
 .tools__item--danger {
   color: var(--muji-red-deep);
 }
 
 .tools__item--danger:hover:not(:disabled) {
   background: var(--muji-red-tint);
+}
+
+.tools__item--danger:disabled {
+  color: var(--ink-faint);
 }
 
 .tools__file {
@@ -783,6 +920,24 @@
   .tools__menu {
     right: var(--space-4);
   }
+  /* Reclaim width for the lead action: the mute toggle and More collapse to
+     their icons (state stays carried by the icon + aria-pressed). */
+  .dock {
+    padding: var(--space-2) var(--space-4);
+  }
+  .dock__mute,
+  .dock__tools {
+    padding-inline: var(--space-3);
+  }
+  .dock__label {
+    /* Hidden visually; the icon and aria-pressed still convey state. */
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
 }
 
 /* --- Small phones --------------------------------------------------- */
@@ -807,6 +962,14 @@
   .pool__head {
     padding-bottom: var(--space-2);
   }
+  .dock {
+    padding-block: var(--space-2);
+  }
+  .dock__chime,
+  .dock__mute,
+  .dock__tools {
+    min-height: 2.75rem;
+  }
 }
 
 /* --- Touch devices: comfortable ≥44px tap targets ------------------- */
@@ -818,13 +981,8 @@
   .serving__hold,
   .serving__collect,
   .holding__serve,
-  .holding__collect {
+  .holding__collect,
+  .holding__more {
     min-height: 2.75rem;
-  }
-  .chime-toggle,
-  .chime-replay,
-  .tools__trigger {
-    width: 2.75rem;
-    height: 2.75rem;
   }
 }

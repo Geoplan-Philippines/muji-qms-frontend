@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Bell, BellOff, BellRing, Check, Clock, Eye, EyeOff, MoreHorizontal, Undo2 } from "lucide-react";
+import { Bell, BellOff, BellRing, Check, ChevronDown, Clock, Download, Eye, EyeOff, MoreHorizontal, Trash2, Undo2 } from "lucide-react";
 import { StationBar } from "../../components/station-bar";
 import { Flash } from "../../components/flash";
 import { useClock } from "../../lib/use-clock";
@@ -14,6 +14,15 @@ import { type QueueItem, waitLabel } from "../../../shared/qms.ts";
 import "./table.css";
 
 const TILE = { duration: 0.32, ease: EASE_OUT_QUINT };
+
+// How long a preparing order should take before its tile reads as overdue. The
+// thin bar under each number fills toward this horizon so staff can triage by
+// age at a glance, without reading every wait label.
+const AGING_TARGET_MS = 20 * 60_000;
+
+// "Serve later" can pile up across a shift. Show a handful, tuck the rest behind
+// a toggle so the panel stays scannable instead of an endless scroll.
+const HOLD_PREVIEW = 4;
 
 function byAge(a: QueueItem, b: QueueItem): number {
   return a.since - b.since;
@@ -42,6 +51,7 @@ export default function TableScreen() {
 
   const [confirming, setConfirming] = useState<string | null>(null);
   const [clearOpen, setClearOpen] = useState(false);
+  const [holdingExpanded, setHoldingExpanded] = useState(false);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const clearDialogRef = useRef<HTMLDialogElement>(null);
   const openedAtRef = useRef(0);
@@ -58,6 +68,10 @@ export default function TableScreen() {
     () => items.filter((i) => i.status === "holding").sort(byAge),
     [items],
   );
+  const holdingShown =
+    holdingExpanded || holding.length <= HOLD_PREVIEW
+      ? holding
+      : holding.slice(0, HOLD_PREVIEW);
 
   useEffect(() => {
     if (lastError) show("error", lastError.number, formatQueueError(lastError));
@@ -162,81 +176,6 @@ export default function TableScreen() {
         time={now}
         canUndo={canUndo}
         onUndo={undo}
-        actions={
-          <>
-            <button
-              type="button"
-              className="chime-toggle"
-              onClick={handleChimeToggle}
-              title={chimeEnabled ? "Serve chime on" : "Serve chime off"}
-              aria-label={chimeEnabled ? "Mute serve chime" : "Unmute serve chime"}
-              aria-pressed={chimeEnabled}
-            >
-              {chimeEnabled ? (
-                <Bell size={18} aria-hidden="true" />
-              ) : (
-                <BellOff size={18} aria-hidden="true" />
-              )}
-            </button>
-            <button
-              type="button"
-              className="chime-replay"
-              onClick={handleReplayChime}
-              title="Sound chime on the display to notify customers"
-              aria-label="Sound chime on the display to notify customers"
-            >
-              <BellRing size={18} aria-hidden="true" />
-            </button>
-            <div className="tools">
-              <button
-                type="button"
-                className="tools__trigger"
-                popoverTarget="table-tools"
-                aria-haspopup="menu"
-                aria-label="Board tools"
-              >
-                <MoreHorizontal size={18} aria-hidden="true" />
-              </button>
-              <div id="table-tools" popover="auto" className="tools__menu" aria-label="Board tools">
-                <button
-                  type="button"
-                  className="tools__item"
-                  popoverTarget="table-tools"
-                  popoverTargetAction="hide"
-                  onClick={() => setLogoVisible(!logoVisible)}
-                  aria-pressed={logoVisible}
-                >
-                  {logoVisible ? (
-                    <EyeOff size={16} aria-hidden="true" />
-                  ) : (
-                    <Eye size={16} aria-hidden="true" />
-                  )}
-                  {logoVisible ? "Hide display logo" : "Show display logo"}
-                </button>
-                <button
-                  type="button"
-                  className="tools__item"
-                  popoverTarget="table-tools"
-                  popoverTargetAction="hide"
-                  onClick={handleExport}
-                  disabled={items.length === 0}
-                >
-                  Export CSV
-                </button>
-                <button
-                  type="button"
-                  className="tools__item tools__item--danger"
-                  popoverTarget="table-tools"
-                  popoverTargetAction="hide"
-                  onClick={() => setClearOpen(true)}
-                  disabled={items.length === 0}
-                >
-                  Clear queue
-                </button>
-              </div>
-            </div>
-          </>
-        }
       />
 
       <main className="table__main">
@@ -246,7 +185,7 @@ export default function TableScreen() {
             <span className="pool__count tnum" aria-label={`${preparing.length} orders`}>
               {preparing.length}
             </span>
-            <p className="pool__hint">Tap to serve · oldest first</p>
+            <p className="pool__hint">Tap to serve - First In, First Out</p>
           </header>
 
           {preparing.length === 0 ? (
@@ -257,6 +196,7 @@ export default function TableScreen() {
                 {preparing.map((item, index) => {
                   const wait = waitLabel(item.since, nowMs);
                   const isNext = index === 0;
+                  const age = Math.min(1, Math.max(0, (nowMs - item.since) / AGING_TARGET_MS));
                   return (
                   <motion.li
                     key={item.number}
@@ -277,7 +217,13 @@ export default function TableScreen() {
                     >
                       {isNext && <span className="pool__next" aria-hidden="true">Next</span>}
                       <span className="pool__num tnum">{item.number}</span>
-                      <span className="pool__wait">{wait}</span>
+                      <span className="pool__wait">
+                        <Clock size={13} aria-hidden="true" className="pool__wait-icon" />
+                        {wait}
+                      </span>
+                      <span className="pool__age" aria-hidden="true">
+                        <span className="pool__age-fill" style={{ transform: `scaleX(${age})` }} />
+                      </span>
                     </button>
                   </motion.li>
                   );
@@ -344,7 +290,7 @@ export default function TableScreen() {
                 </p>
                 <p className="holding__hint">Kept to collect later</p>
                 <ul className="holding__list">
-                  {holding.map((i) => (
+                  {holdingShown.map((i) => (
                     <li key={i.number} className="holding__item">
                       <span className="holding__num tnum">{i.number}</span>
                       <span className="holding__wait">{waitLabel(i.since, nowMs)}</span>
@@ -369,11 +315,108 @@ export default function TableScreen() {
                     </li>
                   ))}
                 </ul>
+                {holding.length > HOLD_PREVIEW && (
+                  <button
+                    type="button"
+                    className="holding__more"
+                    onClick={() => setHoldingExpanded((v) => !v)}
+                    aria-expanded={holdingExpanded}
+                  >
+                    {holdingExpanded ? "Show fewer" : `View all ${holding.length}`}
+                    <ChevronDown
+                      size={16}
+                      aria-hidden="true"
+                      className="holding__more-icon"
+                      data-open={holdingExpanded}
+                    />
+                  </button>
+                )}
               </section>
             )}
           </div>
         </aside>
       </main>
+
+      <footer className="dock" aria-label="Board controls">
+        <div className="dock__group">
+          <button
+            type="button"
+            className="dock__chime"
+            onClick={handleReplayChime}
+            title="Sound the chime on the display to call waiting customers"
+          >
+            <BellRing size={20} aria-hidden="true" />
+            Sound chime
+          </button>
+          <button
+            type="button"
+            className="dock__mute"
+            onClick={handleChimeToggle}
+            aria-pressed={chimeEnabled}
+            title={chimeEnabled ? "Serve chime is on" : "Serve chime is off"}
+          >
+            {chimeEnabled ? (
+              <Bell size={18} aria-hidden="true" />
+            ) : (
+              <BellOff size={18} aria-hidden="true" />
+            )}
+            <span className="dock__label">{chimeEnabled ? "Chime on" : "Chime off"}</span>
+          </button>
+        </div>
+
+        <div className="tools">
+          <button
+            type="button"
+            className="dock__tools"
+            popoverTarget="table-tools"
+            aria-haspopup="menu"
+            aria-label="More board tools"
+          >
+            <MoreHorizontal size={20} aria-hidden="true" />
+            <span className="dock__label">More</span>
+          </button>
+          <div id="table-tools" popover="auto" className="tools__menu" aria-label="Board tools">
+            <button
+              type="button"
+              className="tools__item"
+              popoverTarget="table-tools"
+              popoverTargetAction="hide"
+              onClick={() => setLogoVisible(!logoVisible)}
+              aria-pressed={logoVisible}
+            >
+              {logoVisible ? (
+                <EyeOff size={16} aria-hidden="true" />
+              ) : (
+                <Eye size={16} aria-hidden="true" />
+              )}
+              {logoVisible ? "Hide display logo" : "Show display logo"}
+            </button>
+            <button
+              type="button"
+              className="tools__item"
+              popoverTarget="table-tools"
+              popoverTargetAction="hide"
+              onClick={handleExport}
+              disabled={items.length === 0}
+            >
+              <Download size={16} aria-hidden="true" />
+              Export CSV
+            </button>
+            <div className="tools__sep" role="separator" />
+            <button
+              type="button"
+              className="tools__item tools__item--danger"
+              popoverTarget="table-tools"
+              popoverTargetAction="hide"
+              onClick={() => setClearOpen(true)}
+              disabled={items.length === 0}
+            >
+              <Trash2 size={16} aria-hidden="true" />
+              Clear queue
+            </button>
+          </div>
+        </div>
+      </footer>
 
       <dialog
         ref={dialogRef}
