@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check } from "lucide-react";
+import { Check, ChevronRight } from "lucide-react";
 import { StationBar } from "../../components/station-bar";
 import { NumericKeypad } from "../../components/numeric-keypad";
 import { DigitEntry } from "../../components/digit-entry";
 import { Flash } from "../../components/flash";
 import { PickupChoice } from "../../components/pickup-choice";
+import { ServeChoice } from "../../components/serve-choice";
 import { useClock } from "../../lib/use-clock";
 import { useQueue } from "../../lib/use-queue";
 import { useFlash } from "../../lib/use-flash";
@@ -16,7 +17,7 @@ import "./staff.css";
 type Mode = "scan" | "manual" | "ready";
 
 export default function StaffScreen() {
-  const { items, status, canUndo, lastError, scan, markReady, hold, collect, undo } =
+  const { items, status, canUndo, lastError, scan, markReady, hold, collect, cancel, undo } =
     useQueue();
   const now = useClock(1000);
   const { feedback, show } = useFlash();
@@ -24,6 +25,7 @@ export default function StaffScreen() {
   const [mode, setMode] = useState<Mode>("scan");
   const [entry, setEntry] = useState("");
   const [choosing, setChoosing] = useState<string | null>(null);
+  const [serveChoosing, setServeChoosing] = useState<string | null>(null);
   const scannerCaptureRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -43,11 +45,16 @@ export default function StaffScreen() {
     },
     [scan, show],
   );
-  useScanner(mode === "scan", onScan);
+  // Always armed, in every mode: a scan should prepare an order whether the
+  // operator is on the Scan tab or has stepped over to Serve / Type. The hook
+  // tells a scanner burst from a stray keypress by speed, so this is safe.
+  useScanner(true, onScan);
 
+  // Keep the hidden capture input focused in every mode so the wedge always has
+  // somewhere to land. `inputMode="none"` keeps the soft keyboard down, and any
+  // tap (a tab, a queue chip) re-arms it on pointerup — so the operator never
+  // has to think about "is the field selected?" before scanning.
   useEffect(() => {
-    if (mode !== "scan") return;
-
     const focusScannerCapture = () => {
       window.setTimeout(() => {
         scannerCaptureRef.current?.focus({ preventScroll: true });
@@ -145,6 +152,26 @@ export default function StaffScreen() {
     [collect, show],
   );
 
+  // Tapping a Preparing number opens a small sheet: serve it, or cancel it.
+  // Cancel can't be undone, so it stays behind this one deliberate step.
+  const confirmServeChoice = useCallback(
+    (number: string) => {
+      markReady(number);
+      show("ok", number, "now serving");
+      setServeChoosing(null);
+    },
+    [markReady, show],
+  );
+
+  const confirmCancelChoice = useCallback(
+    (number: string) => {
+      cancel(number);
+      show("ok", number, "cancelled");
+      setServeChoosing(null);
+    },
+    [cancel, show],
+  );
+
   const preparing = items
     .filter((i) => i.status === "preparing")
     .sort((a, b) => a.since - b.since); // oldest first, so the list reads in arrival order
@@ -202,20 +229,22 @@ export default function StaffScreen() {
 
       <main className="staff__main">
         <section className="staff__stage" aria-live="polite">
+          {/* Always mounted, always focused: the wedge lands here in every mode,
+              not just on the Scan tab. */}
+          <input
+            ref={scannerCaptureRef}
+            className="scan__capture"
+            data-scanner-capture="true"
+            type="text"
+            inputMode="none"
+            autoCapitalize="off"
+            autoComplete="off"
+            autoFocus
+            spellCheck={false}
+            aria-label="Scanner capture"
+          />
           {mode === "scan" ? (
             <div className="scan">
-              <input
-                ref={scannerCaptureRef}
-                className="scan__capture"
-                data-scanner-capture="true"
-                type="text"
-                inputMode="none"
-                autoCapitalize="off"
-                autoComplete="off"
-                autoFocus
-                spellCheck={false}
-                aria-label="Scanner capture"
-              />
               <svg className="scan__icon" viewBox="0 0 48 48" fill="none" aria-hidden="true">
                 <path d="M6 14V9a3 3 0 0 1 3-3h5M34 6h5a3 3 0 0 1 3 3v5M42 34v5a3 3 0 0 1-3 3h-5M14 42H9a3 3 0 0 1-3-3v-5" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" />
                 <path d="M12 24h24" stroke="var(--muji-red)" strokeWidth="2.4" strokeLinecap="round" />
@@ -250,12 +279,23 @@ export default function StaffScreen() {
             <h2 className="queue__title">
               Preparing <span className="queue__count">{preparing.length}</span>
             </h2>
-            {preparing.length > 1 && <p className="queue__hint">Oldest first</p>}
+            {preparing.length > 0 && (
+              <p className="queue__hint">Tap to serve · oldest first</p>
+            )}
             <ul className="queue__list">
               {preparing.length === 0 && <li className="queue__empty">None</li>}
               {preparing.map((i) => (
-                <li key={i.number} className="chip tnum">
-                  {i.number}
+                <li key={i.number}>
+                  <button
+                    type="button"
+                    className="chip chip--advance"
+                    onClick={() => setServeChoosing(i.number)}
+                    aria-label={`Order ${i.number}: serve or cancel`}
+                    aria-haspopup="dialog"
+                  >
+                    <span className="tnum">{i.number}</span>
+                    <ChevronRight className="chip__advance-icon" size={14} aria-hidden="true" />
+                  </button>
                 </li>
               ))}
             </ul>
@@ -316,6 +356,13 @@ export default function StaffScreen() {
         onPickedUpAll={() => choosing && confirmPickedUpAll(choosing)}
         onHoldRemainder={() => choosing && confirmHoldRemainder(choosing)}
         onCancel={() => setChoosing(null)}
+      />
+
+      <ServeChoice
+        number={serveChoosing}
+        onServe={() => serveChoosing && confirmServeChoice(serveChoosing)}
+        onCancelOrder={() => serveChoosing && confirmCancelChoice(serveChoosing)}
+        onDismiss={() => setServeChoosing(null)}
       />
     </div>
   );

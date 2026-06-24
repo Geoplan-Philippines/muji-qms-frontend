@@ -32,6 +32,8 @@ export interface QueueApi {
   markReady: (number: string) => void;
   hold: (number: string) => void;
   collect: (number: string) => void;
+  /** Drop a single preparing order that will never be collected (CANCELLED). */
+  cancel: (number: string) => void;
   unready: (number: string) => void;
   clear: () => void;
   importItems: (items: QueueItem[]) => void;
@@ -278,6 +280,14 @@ export function useQueue(): QueueApi {
     apiPatch(item.id, "SERVED").catch((err) => reportError(number, "collect_failed", err));
   }, []);
 
+  // Single-order version of clear(): drop one preparing order the store will
+  // never serve. The backend filters CANCELLED out, so it leaves the board.
+  const cancel = useCallback((number: string) => {
+    const item = findItem(number);
+    if (!item?.id) return;
+    apiPatch(item.id, "CANCELLED").catch((err) => reportError(number, "cancel_failed", err));
+  }, []);
+
   const unready = useCallback((number: string) => {
     const item = findItem(number);
     if (!item?.id) return;
@@ -322,6 +332,7 @@ export function useQueue(): QueueApi {
     markReady,
     hold,
     collect,
+    cancel,
     unready,
     clear,
     importItems,

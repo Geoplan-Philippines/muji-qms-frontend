@@ -1,6 +1,8 @@
 import { useEffect, useRef } from "react";
 
 const IDLE_FINALIZE_MS = 70; // Zebra wedge bursts keystrokes; this groups one scan
+const FAST_KEY_MS = 50; // a real scan's keys arrive faster than this between chars
+const MIN_SCAN_LEN = 3; // ignore 1-2 stray chars so slow human keys never misfire
 
 function isTextEntryTarget(target: EventTarget | null): boolean {
   const element = target as HTMLElement | null;
@@ -26,6 +28,11 @@ function shouldIgnoreTarget(target: EventTarget | null): boolean {
  * burst of a scan and finalizes it on Enter (if the wedge appends one) or
  * after a short idle gap (if it doesn't). Keystrokes typed into a real input
  * are ignored so manual entry keeps working.
+ *
+ * The burst is identified by *speed*: scanner keys arrive within FAST_KEY_MS of
+ * each other, while a person types far slower. A slow gap restarts the buffer
+ * and finalize ignores anything shorter than MIN_SCAN_LEN, so the hook can stay
+ * armed in every mode without a stray human keypress ever being read as a scan.
  */
 export function useScanner(enabled: boolean, onScan: (raw: string) => void): void {
   const onScanRef = useRef(onScan);
@@ -38,11 +45,13 @@ export function useScanner(enabled: boolean, onScan: (raw: string) => void): voi
 
     let buffer = "";
     let idle: ReturnType<typeof setTimeout> | undefined;
+    let lastKeyTime = 0;
 
     const finalize = () => {
       const value = buffer;
       buffer = "";
-      if (value) onScanRef.current(value);
+      // Only a full burst is a scan; 1-2 chars are stray human keys, not a code.
+      if (value.length >= MIN_SCAN_LEN) onScanRef.current(value);
     };
 
     const onKeyDown = (event: KeyboardEvent) => {
@@ -58,6 +67,11 @@ export function useScanner(enabled: boolean, onScan: (raw: string) => void): voi
       }
       if (event.key.length === 1 && /[0-9A-Za-z]/.test(event.key)) {
         if (isCapture) event.preventDefault();
+        const now = performance.now();
+        // A gap wider than a machine burst means the prior keys weren't part of
+        // this scan (human typing, or a stale buffer): start fresh from here.
+        if (buffer && now - lastKeyTime > FAST_KEY_MS) buffer = "";
+        lastKeyTime = now;
         buffer += event.key;
         if (idle) clearTimeout(idle);
         idle = setTimeout(finalize, IDLE_FINALIZE_MS);

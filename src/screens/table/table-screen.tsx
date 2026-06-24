@@ -39,6 +39,7 @@ export default function TableScreen() {
     markReady,
     hold,
     collect,
+    cancel,
     unready,
     clear,
     setChime,
@@ -129,6 +130,14 @@ export default function TableScreen() {
     if (confirming) serve(confirming);
     dialogRef.current?.close();
   }, [confirming, serve]);
+
+  const confirmCancel = useCallback(() => {
+    if (confirming) {
+      cancel(confirming);
+      show("ok", confirming, "cancelled");
+    }
+    dialogRef.current?.close();
+  }, [confirming, cancel, show]);
 
   useEffect(() => {
     const dialog = clearDialogRef.current;
@@ -442,12 +451,19 @@ export default function TableScreen() {
                 onClick={() => dialogRef.current?.close()}
                 autoFocus
               >
-                Cancel
+                Keep
               </button>
               <button type="button" className="confirm__serve" onClick={confirmServe}>
                 Serve
               </button>
             </div>
+            <button
+              type="button"
+              className="confirm__cancel-order"
+              onClick={confirmCancel}
+            >
+              Cancel order
+            </button>
           </div>
         )}
       </dialog>

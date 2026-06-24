@@ -75,6 +75,37 @@
   border-color: var(--muji-red);
 }
 
+/* Serve: the prominent, common choice — filled red like the other primary
+   commit buttons (confirm__serve, collect). */
+.pickup__action--serve {
+  background: var(--muji-red);
+  border-color: var(--muji-red);
+}
+
+.pickup__action--serve:hover {
+  background: var(--muji-red-deep);
+  border-color: var(--muji-red-deep);
+}
+
+.pickup__action--serve .pickup__action-title {
+  color: var(--accent-on);
+}
+
+.pickup__action--serve .pickup__action-sub {
+  color: var(--muji-red-tint);
+}
+
+/* Cancel order: the destructive choice — quiet at rest, red text, red wash on
+   hover. Subordinate to Serve so it isn't tapped by reflex. */
+.pickup__action--danger .pickup__action-title {
+  color: var(--muji-red-deep);
+}
+
+.pickup__action--danger:hover {
+  background: var(--muji-red-tint);
+  border-color: var(--muji-red);
+}
+
 .pickup__action-title {
   font-size: 1.05rem;
   font-weight: var(--weight-semibold);

@@ -24,6 +24,8 @@ export function formatQueueError(e: QueueError): string {
       return e.number ? `Could not save ${e.number} for later` : "Could not save order for later";
     case "collect_failed":
       return e.number ? `Could not collect ${e.number}` : "Could not collect order";
+    case "cancel_failed":
+      return e.number ? `Could not cancel ${e.number}` : "Could not cancel order";
     case "unready_failed":
       return e.number ? `Could not return ${e.number} to preparing` : "Could not return order";
     case "not_supported":
