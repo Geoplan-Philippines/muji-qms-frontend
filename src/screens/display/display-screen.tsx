@@ -161,7 +161,10 @@ export default function DisplayScreen() {
       </footer>
 
       <AnimatePresence>
-        {status !== "online" && (
+        {/* Only warn customers when the board may genuinely be stale. In
+            "degraded" the socket is down but polling is still keeping this
+            screen correct, so a banner would be alarming and wrong. */}
+        {status === "offline" && (
           <motion.div
             className="display__offline"
             role="status"

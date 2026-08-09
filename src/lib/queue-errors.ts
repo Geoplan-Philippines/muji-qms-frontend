@@ -26,6 +26,14 @@ export function formatQueueError(e: QueueError): string {
       return e.number ? `Could not collect ${e.number}` : "Could not collect order";
     case "unready_failed":
       return e.number ? `Could not return ${e.number} to preparing` : "Could not return order";
+    case "clear_failed":
+      return e.message;
+    case "chime_offline":
+      return "Not connected to the display — could not sound the chime";
+    case "config_missing":
+      // A build-time misconfiguration, not something staff can fix at the
+      // counter. Say it plainly so it gets escalated instead of retried.
+      return "This screen is not set up for a store — rebuild with VITE_STORE_ID set";
     case "not_supported":
       return e.message;
     default:

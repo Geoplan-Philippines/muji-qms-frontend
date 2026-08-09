@@ -8,6 +8,17 @@ const timeFmt = new Intl.DateTimeFormat("en-GB", {
   minute: "2-digit",
 });
 
+// "Syncing" is deliberately distinct from "Reconnecting": the board is still
+// correct, it is just being refreshed by polling instead of pushed over the
+// socket. Staff need to know the difference between "slightly behind" and
+// "do not trust what you are looking at".
+const CONN_LABEL: Record<ConnectionStatus, string> = {
+  online: "Connected",
+  degraded: "Syncing…",
+  connecting: "Connecting…",
+  offline: "Reconnecting…",
+};
+
 interface StationBarProps {
   /** Short station role, e.g. "Counter" or "Table service". */
   role: string;
@@ -35,9 +46,7 @@ export function StationBar({ role, status, time, canUndo, onUndo, actions }: Sta
         <div className="station-bar__readout">
           <span className="conn" data-status={status}>
             <span className="conn__dot" aria-hidden="true" />
-            <span className="conn__text">
-              {status === "online" ? "Connected" : "Reconnecting…"}
-            </span>
+            <span className="conn__text">{CONN_LABEL[status]}</span>
           </span>
           <time className="station-bar__clock tnum" dateTime={time.toISOString()}>
             {timeFmt.format(time)}

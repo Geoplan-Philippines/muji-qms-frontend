@@ -70,6 +70,13 @@
   background: #1faa59;
 }
 
+/* Degraded: the board is still correct (REST polling is carrying it), the live
+   push just isn't working. Amber, not red — nothing is wrong with the data. */
+.conn[data-status="degraded"] .conn__dot {
+  background: #c98a12;
+  animation: conn-pulse 1.6s var(--ease-standard) infinite;
+}
+
 .conn[data-status="offline"] .conn__dot,
 .conn[data-status="connecting"] .conn__dot {
   background: var(--muji-red);
