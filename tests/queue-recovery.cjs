@@ -4,7 +4,7 @@ const vm = require('node:vm');
 const ts = require('typescript');
 // Runs the real hooks with a virtual clock, socket and HTTP responses.
 
-async function check() {
+async function check(initialMany = false, coldFailure = false) {
   let now = Date.parse('2026-10-15T07:12:00Z');
   const start = now;
   let cursor = 0, timerId = 0, reads = 0;
@@ -46,7 +46,11 @@ async function check() {
   };
   let orders = [{ id: 'order-7126', orderNumber: '7126', storeId: 'test', orderStatus: 'PREPARING',
     createdAt: new Date(start).toISOString(), updatedAt: new Date(start).toISOString() }];
-  let responseMode = 'ok', frontendReachable = false, reloads = 0, blocked = false;
+  if (initialMany) orders.push(
+    { ...orders[0], id: 'order-7127', orderNumber: '7127', orderStatus: 'SERVING' },
+    { ...orders[0], id: 'order-7128', orderNumber: '7128', orderStatus: 'ON_HOLD' },
+  );
+  let responseMode = coldFailure ? 'error' : 'ok', frontendReachable = false, reloads = 0, blocked = false;
   let finishWrite;
   const net = {
     requestJson: async url => {
@@ -66,6 +70,10 @@ async function check() {
   };
   const storage = { getItem: () => null, removeItem: noop, setItem: noop };
   const sandbox = {
+    // Older Android WebViews do not provide Object.hasOwn. A refresh must still
+    // hydrate existing orders; socket-only tests missed this exact failure.
+    Object: Object.assign(Object.setPrototypeOf(function LegacyObject(value) { return Object(value); }, Object),
+      { hasOwn: undefined }),
     Date: class extends Date { static now() { return now; } },
     console: { log: noop, warn: noop }, URLSearchParams,
     localStorage: storage, sessionStorage: storage,
@@ -115,6 +123,21 @@ async function check() {
   }
   render();
   await settle();
+  if (coldFailure) {
+    assert.equal(board.items.length, 0, 'failed first fetch starts with no orders');
+    responseMode = 'ok';
+    await advance(20000);
+    assert.equal(board.items.length, 1, 'polling must restore existing orders after a failed first fetch');
+    assert.equal(board.items[0].number, '7126');
+    return;
+  }
+  if (initialMany) {
+    assert.equal(reads, 1, 'fresh screen should request the whole board immediately');
+    assert.deepEqual([...board.items.map(item => item.status)].sort(), ['holding', 'preparing', 'ready']);
+    return;
+  }
+  assert.equal(board.items.length, 1, 'freshly loaded screen must hydrate existing orders without a socket event');
+  assert.equal(board.items[0].number, '7126');
   // The server is two minutes ahead of this device.
   handlers.get('time:sync')({ now: start + 120000 });
   render();
@@ -137,6 +160,7 @@ async function check() {
   responseMode = 'error';
   await advance(360000);
   assert.equal(board.items.length, 1, 'failed polls must preserve the board');
+  assert.equal(reloads, 0, 'recovery must not reload a screen displaying existing orders');
   assert.equal(board.status, 'offline');
   assert.equal(reloads, 0, 'unreachable frontend must not reload into a browser error');
   blocked = true;
@@ -162,10 +186,10 @@ async function check() {
   assert.equal(board.items.length, 0);
 }
 (async () => {
-
-
+  await check(true);
+  await check(false, true);
   await check();
-  console.log('PASS: idle/disconnected/empty clocks, HTTP time fallback, malformed/failed poll preservation, LAN recovery reload protection, unfinished-entry protection');
+  console.log('PASS: fresh load restores all active orders on an older WebView; idle/disconnected clocks and recovery checks');
 })().catch(err => { console.error(err); process.exitCode = 1; });
 
 

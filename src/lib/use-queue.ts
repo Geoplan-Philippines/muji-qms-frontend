@@ -181,7 +181,10 @@ async function fetchSnapshot(): Promise<Snapshot> {
   // A malformed success response is a failed sync, not an empty queue.
   if (!Array.isArray(orders) || orders.some((order) =>
     !order || typeof order.id !== "string" || typeof order.orderNumber !== "string" ||
-    !Object.hasOwn(BOARD_STATUS, order.orderStatus) ||
+    // Fully Kiosk may run an older Android WebView without Object.hasOwn.
+    // Throwing here rejects every snapshot that contains an order, leaving a
+    // refreshed board empty while later socket events still appear.
+    !Object.prototype.hasOwnProperty.call(BOARD_STATUS, order.orderStatus) ||
     !Number.isFinite(parseServerTime(order.createdAt)) ||
     !Number.isFinite(parseServerTime(order.updatedAt))
   )) throw new Error("Invalid queue response; keeping the previous board");
@@ -613,11 +616,13 @@ export function useQueue(): QueueApi {
 
       refreshStatus();
 
-      // Last resort. Both data paths have been dead for minutes, so the page
-      // itself is suspect — reload rather than wait for someone to walk over and
-      // power-cycle the device. Backs off so a genuinely dead server doesn't turn
-      // into a reload loop, and never interrupts someone mid-entry.
+      // Last resort for a truly empty, disconnected screen. A failed snapshot
+      // must never make us reload away orders that are still visible, or orders
+      // arriving over a live socket. Both cases are safer left on screen while
+      // the poll keeps trying to recover.
       if (statusRef.current !== "offline") return;
+      if (boardRef.current.length > 0) return;
+      if (socket.connected && now - lastSocketContactRef.current < SOCKET_SILENCE_MS) return;
       if (now - lastInputRef.current < RECENT_INPUT_MS || isReloadBlocked()) return;
       const deadFor = now - Math.max(lastSyncOkRef.current, mountedAtRef.current);
       const attempts = readReloadCount();
