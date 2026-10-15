@@ -87,26 +87,22 @@ export default function DisplayScreen() {
               <span className="col__rule" aria-hidden="true" />
             </header>
             <div className="prep__list" data-density={preparingDensity(preparing.length)}>
-              {preparing.length === 0 ? (
-                <p className="prep__empty">No orders yet</p>
-              ) : (
-                <AnimatePresence mode="popLayout" initial={false}>
-                  {preparing.map((item) => (
-                    <motion.div
-                      key={item.number}
-                      layout
-                      layoutId={`q-${item.number}`}
-                      className="prep__item"
-                      initial={{ opacity: 0, scale: 0.9, y: 14 }}
-                      animate={{ opacity: 1, scale: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.92 }}
-                      transition={{ layout: MOVE, default: ENTER }}
-                    >
-                      <span className="prep__num tnum">{item.number}</span>
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              )}
+              <AnimatePresence mode="popLayout" initial={false}>
+                {preparing.map((item) => (
+                  <motion.div
+                    key={item.number}
+                    layout
+                    layoutId={`q-${item.number}`}
+                    className="prep__item"
+                    initial={{ opacity: 0, scale: 0.9, y: 14 }}
+                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                    exit={{ opacity: 0, scale: 0.92 }}
+                    transition={{ layout: MOVE, default: ENTER }}
+                  >
+                    <span className="prep__num tnum">{item.number}</span>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
           </section>
 
@@ -116,28 +112,24 @@ export default function DisplayScreen() {
               <span className="col__rule" aria-hidden="true" />
             </header>
             <div className="serve__body">
-              {ready.length === 0 ? (
-                <p className="serve__empty">Nothing ready yet</p>
-              ) : (
-                <div className="serve__list" data-density={preparingDensity(ready.length)}>
-                  <AnimatePresence mode="popLayout" initial={false}>
-                    {ready.map((item) => (
-                      <motion.div
-                        key={item.number}
-                        layout
-                        layoutId={`q-${item.number}`}
-                        className="serve__item"
-                        initial={{ opacity: 0, scale: 0.9, y: 14 }}
-                        animate={{ opacity: 1, scale: 1, y: 0 }}
-                        exit={{ opacity: 0, scale: 0.92 }}
-                        transition={{ layout: MOVE, default: ENTER }}
-                      >
-                        <span className="serve__num tnum">{item.number}</span>
-                      </motion.div>
-                    ))}
-                  </AnimatePresence>
-                </div>
-              )}
+              <div className="serve__list" data-density={preparingDensity(ready.length)}>
+                <AnimatePresence mode="popLayout" initial={false}>
+                  {ready.map((item) => (
+                    <motion.div
+                      key={item.number}
+                      layout
+                      layoutId={`q-${item.number}`}
+                      className="serve__item"
+                      initial={{ opacity: 0, scale: 0.9, y: 14 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.92 }}
+                      transition={{ layout: MOVE, default: ENTER }}
+                    >
+                      <span className="serve__num tnum">{item.number}</span>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </div>
             </div>
           </section>
         </LayoutGroup>
@@ -149,7 +141,8 @@ export default function DisplayScreen() {
         {/* Safety notice — quiet ink, never red. One copy scrolls across. */}
         <div className="display__notice">
           <span className="display__notice-text">
-            Do not leave your things unattended
+            Do not leave your things unattended — the management will not be
+            liable for any loss or damage.
           </span>
         </div>
         <div className="display__bar-meta">

@@ -75,7 +75,7 @@
   text-transform: uppercase;
   color: var(--ink);
   will-change: transform;
-  animation: notice-scroll 26s linear infinite;
+  animation: notice-scroll 42s linear infinite;
 }
 
 @keyframes notice-scroll {
@@ -195,12 +195,6 @@
   color: var(--ink);
 }
 
-.prep__empty {
-  margin: auto;
-  font-size: clamp(1rem, 1.6vw, 1.6rem);
-  color: var(--ink-soft);
-}
-
 /* --- Now Serving column (drenched) ------------------------------------ */
 .serve {
   display: flex;
@@ -269,12 +263,6 @@
   font-weight: var(--weight-bold);
   line-height: 0.9;
   color: var(--accent-on);
-}
-
-.serve__empty {
-  margin: auto;
-  font-size: clamp(1.2rem, 2vw, 2rem);
-  color: rgba(252, 249, 248, 0.85);
 }
 
 /* --- Offline notice --------------------------------------------------- */
