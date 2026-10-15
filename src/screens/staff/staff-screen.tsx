@@ -16,9 +16,9 @@ import "./staff.css";
 type Mode = "scan" | "manual" | "ready";
 
 export default function StaffScreen() {
-  const { items, status, canUndo, lastError, scan, markReady, hold, collect, undo } =
+  const { items, status, canUndo, lastError, clockOffset, scan, markReady, hold, collect, undo } =
     useQueue();
-  const now = useClock(1000);
+  const now = useClock(1000, clockOffset);
   const { feedback, show } = useFlash();
 
   const [mode, setMode] = useState<Mode>("scan");
@@ -152,7 +152,7 @@ export default function StaffScreen() {
   const holding = items.filter((i) => i.status === "holding");
 
   return (
-    <div className="staff">
+    <div className="staff" data-reload-blocked={entry.length > 0 || choosing !== null || undefined}>
       <StationBar
         role="Counter"
         status={status}

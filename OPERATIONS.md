@@ -56,7 +56,7 @@ Work down this list; stop when the answer is yes.
 1. **What does the pill say?**
    "Reconnecting…" → the device cannot reach the mini PC at all. Go to §3.
    "Syncing…" → the socket path is broken but data is flowing. Go to §4.
-   "Connected" but wrong → this should now be impossible; capture the console
+   "Connected" but wrong → capture the console
    with `?debug=1` before touching anything.
 
 2. **Can the device reach the backend?** In Fully Kiosk, open
@@ -160,7 +160,7 @@ Settings that matter on the scanner, tablet and TV:
 ## 5. Redeploying
 
 ```powershell
-.\deploy.ps1            # or -SkipInstall when only code changed
+.\deploy.ps1 -SkipInstall  # offline mini PC: reuse installed dependencies
 ```
 
 `deploy.ps1` now refuses to build when `.env` has no `VITE_API_URL`, points at
@@ -168,11 +168,21 @@ localhost, or still carries the `your-store-uuid-here` placeholder — that
 placeholder produced a screen that said "Connected" and showed an empty board
 forever. It also probes the backend and warns if it isn't reachable.
 
-Devices pick up a new build on their own: the service worker's cache is keyed to
-a build stamp, and each screen checks for an update every 30 minutes and on every
-wake, reloading once the new version activates. No need to touch the devices.
+After this version is loaded, devices check the mini PC's `version.json` every
+30 minutes and when returning online or visible. This works on plain LAN HTTP
+without a service worker. Refresh each existing screen once after this rollout;
+the old bundle does not contain the new version checker. Development (`bun run
+dev`) does not use the production version checker: serve the built `dist/` for
+production deployment.
 
-The reload waits for the screen to be idle for 30s first, so a redeploy can never
-interrupt someone mid-order. The TV takes it immediately; the counter and table
-tablets take it in the next lull — expect them to land within a minute or two of
-each other rather than all at once.
+Update reloads wait for 30 seconds without input, no unfinished number entry,
+no open confirmation, and no active HTTP mutation. They recheck the LAN before
+navigating. Recovery reloads also probe the frontend first so a lost network
+does not replace a visible board with a browser error.
+
+The clock uses the mini PC's explicit current time, via socket or the HTTP health
+endpoint. Order timestamps never reset it. All three screens use the same offset;
+without internet, keep the mini PC's date/time and the devices' time zones correct.
+
+See [the offline audit and rebuild notes](OFFLINE-AUDIT.md) for the verified scope
+and remaining on-site checks.

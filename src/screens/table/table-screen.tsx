@@ -45,7 +45,7 @@ export default function TableScreen() {
     requestChime,
     undo,
   } = useQueue();
-  const now = useClock(1000);
+  const now = useClock(1000, clockOffset);
   const { feedback, show } = useFlash();
   const [logoVisible, setLogoVisible] = useLogoVisible();
 
@@ -166,7 +166,7 @@ export default function TableScreen() {
 
   // Offset-corrected "now" so wait times count from the server's clock, not this
   // device's — keeps every screen in agreement even with a drifted tablet clock.
-  const nowMs = now.getTime() + clockOffset;
+  const nowMs = now.getTime();
 
   return (
     <div className="table">

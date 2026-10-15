@@ -7,6 +7,7 @@
     "dev": "vite --host",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
+    "test": "node tests/queue-recovery.cjs && node tests/update-recovery.cjs",
     "preview": "vite preview --host"
   },
   "dependencies": {

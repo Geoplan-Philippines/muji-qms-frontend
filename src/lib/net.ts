@@ -9,6 +9,9 @@
  */
 
 const DEFAULT_TIMEOUT_MS = 8_000;
+let pendingMutations = 0;
+
+export const hasPendingMutations = (): boolean => pendingMutations > 0;
 
 export interface RequestFailure extends Error {
   /** HTTP status, or 0 when no response was ever received. */
@@ -59,6 +62,8 @@ async function send<T>(
 ): Promise<T> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
+  const mutation = !["GET", "HEAD"].includes((init.method ?? "GET").toUpperCase());
+  if (mutation) pendingMutations += 1;
   try {
     const res = await fetch(url, { cache: "no-store", ...init, signal: controller.signal });
     if (!res.ok) throw fail(await describe(res), res.status, false);
@@ -72,6 +77,7 @@ async function send<T>(
       true,
     );
   } finally {
+    if (mutation) pendingMutations -= 1;
     clearTimeout(timer);
   }
 }

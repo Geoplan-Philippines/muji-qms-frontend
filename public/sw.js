@@ -10,11 +10,13 @@
  *     response — caching one as "/index.html" poisons the offline shell so that
  *     every later boot serves the 404, and a plain reload can't fix it.
  *
- *  2. The cache name carries the build id (passed as ?v= on the script URL, see
- *     src/main.tsx). A fixed name meant a redeployed build kept serving the old
+ *  2. The cache name carries the build id stamped into this file by Vite.
+ *     A fixed name meant a redeployed build kept serving the old
  *     shell, so devices could quietly run a bundle with a stale API address.
  */
-const VERSION = new URL(self.location.href).searchParams.get("v") || "dev";
+// Replaced during production builds so reg.update() detects changed bytes,
+// even when an already-open page still checks the old script URL.
+const VERSION = "__QMS_BUILD_ID__";
 const CACHE = `muji-qms-${VERSION}`;
 
 /** A cold boot races the Wi-Fi association; don't hang the shell waiting on it. */
@@ -43,7 +45,7 @@ self.addEventListener("activate", (event) => {
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))),
+        Promise.all(keys.filter((k) => k.startsWith("muji-qms-") && k !== CACHE).map((k) => caches.delete(k))),
       )
       .then(() => self.clients.claim()),
   );
@@ -65,7 +67,8 @@ self.addEventListener("fetch", (event) => {
   // Only handle same-origin GETs. Everything else (sockets, POSTs, APIs,
   // cross-origin) goes straight to the network untouched.
   if (request.method !== "GET" || url.origin !== self.location.origin) return;
-  if (url.pathname.startsWith("/socket.io") || url.pathname.startsWith("/api")) return;
+  if (url.pathname.startsWith("/socket.io") || url.pathname.startsWith("/api") ||
+    url.pathname === "/version.json" || url.searchParams.has("recovery")) return;
 
   // Navigations: network-first so the latest app loads, cache as offline
   // fallback. The timeout matters at boot — the device often loads the URL

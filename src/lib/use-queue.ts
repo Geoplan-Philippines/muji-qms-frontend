@@ -7,6 +7,7 @@ import {
   type QueueStatus,
 } from "../../shared/qms.ts";
 import { isRequestFailure, requestJson, requestVoid, withRetry } from "./net";
+import { isReloadBlocked } from "./reload-guard";
 
 const API_URL =
   ((import.meta.env.VITE_API_URL as string | undefined) ?? "http://localhost:8000").replace(
@@ -168,8 +169,6 @@ interface Snapshot {
   items: QueueItem[];
   /** Device clock when the request left — anything changed locally after this wins. */
   takenAt: number;
-  /** Server clock, read off the freshest timestamp in the payload. */
-  serverNow: number;
 }
 
 async function fetchSnapshot(): Promise<Snapshot> {
@@ -178,17 +177,18 @@ async function fetchSnapshot(): Promise<Snapshot> {
   const json = await requestJson<{ data?: BackendOrder[] } | BackendOrder[]>(
     `${API_URL}/api/v1/orders/store/${STORE_ID}`,
   );
-  const orders: BackendOrder[] = Array.isArray(json) ? json : (json.data ?? []);
+  const orders = Array.isArray(json) ? json : json?.data;
+  // A malformed success response is a failed sync, not an empty queue.
+  if (!Array.isArray(orders) || orders.some((order) =>
+    !order || typeof order.id !== "string" || typeof order.orderNumber !== "string" ||
+    !Object.hasOwn(BOARD_STATUS, order.orderStatus) ||
+    !Number.isFinite(parseServerTime(order.createdAt)) ||
+    !Number.isFinite(parseServerTime(order.updatedAt))
+  )) throw new Error("Invalid queue response; keeping the previous board");
   const items = orders.map(toItem).filter((i): i is QueueItem => i !== null);
-  // The newest timestamp on the board is the closest thing to "server now" a
-  // plain REST read gives us — enough to keep the clock honest while the socket
-  // (which carries an explicit time:sync) is down.
-  let serverNow = NaN;
-  for (const order of orders) {
-    const t = parseServerTime(order.updatedAt);
-    if (Number.isFinite(t) && (!Number.isFinite(serverNow) || t > serverNow)) serverNow = t;
-  }
-  return { items, takenAt, serverNow };
+  // Order timestamps describe past activity, never the current server time.
+  // Reusing them to calibrate the clock rewinds it on every unchanged poll.
+  return { items, takenAt };
 }
 
 /**
@@ -205,9 +205,10 @@ export function useQueue(): QueueApi {
   const [items, setItems] = useState<QueueItem[]>([]);
   const [connStatus, setConnStatus] = useState<ConnectionStatus>(INITIAL_STATUS);
   const [lastError, setLastError] = useState<QueueError | null>(CONFIG_ERROR);
-  const [chimeEnabled, setChimeEnabled] = useState(
-    () => localStorage.getItem(CHIME_KEY) !== "false",
-  );
+  const [chimeEnabled, setChimeEnabled] = useState(() => {
+    try { return localStorage.getItem(CHIME_KEY) !== "false"; }
+    catch { return true; }
+  });
   const [chimeSignal, setChimeSignal] = useState(0);
 
   const socketRef = useRef<Socket | null>(null);
@@ -254,13 +255,11 @@ export function useQueue(): QueueApi {
 
   // Server-clock calibration. Wait-time ages are measured against this
   // offset-corrected clock so every screen agrees even when a tablet's own clock
-  // is wrong — which matters offline, where devices can't NTP-sync. We learn the
-  // offset purely from the backend's own order timestamps: the createdAt /
-  // updatedAt that ride along on every order event, each ≈ "server now" at the
-  // moment it happened. Because the displayed age is then the difference between
-  // two values parsed the SAME way by parseServerTime, it stays correct no matter
-  // how the backend formats or zones its timestamps (any constant parse offset
-  // cancels). Until the first event the offset is 0 — i.e. the raw device clock.
+  // is wrong — which matters offline, where devices can't NTP-sync. Only the
+  // explicit time:sync message or health response supplies current time. Order times
+  // may be old, even in newly delivered events. Between time syncs, keep the last
+  // offset and let the clock advance normally, including while disconnected.
+  // Until the first time sync, use the device clock (offset 0).
   const [clockOffset, setClockOffset] = useState(0);
   const clockOffsetRef = useRef(0);
   const calibrate = useCallback((serverNowMs: number) => {
@@ -299,6 +298,9 @@ export function useQueue(): QueueApi {
           const key = keyOf(item);
           seen.add(key);
           const local = prevByKey.get(key);
+          // An optimistic collect/cancel removes the item. Its absence is also
+          // pinned while the write is pending or this snapshot predates it.
+          if (!local && isPinned(key)) continue;
           next.push(local && isPinned(key) ? local : item);
         }
 
@@ -314,7 +316,7 @@ export function useQueue(): QueueApi {
         // Stop tracking orders that have left the board entirely.
         const live = new Set(next.map(keyOf));
         for (const key of [...touched.keys()]) {
-          if (!live.has(key)) touched.delete(key);
+          if (!live.has(key) && !isPinned(key)) touched.delete(key);
         }
 
         return sameBoard(prev, next) ? prev : next;
@@ -414,7 +416,6 @@ export function useQueue(): QueueApi {
         if (disposed || gen !== syncGenRef.current) return; // superseded by a newer sync
         lastSyncOkRef.current = Date.now();
         okStreakRef.current += 1;
-        calibrate(snap.serverNow);
 
         const changed = applySnapshot(snap);
         syncsSinceConnectRef.current += 1;
@@ -527,7 +528,6 @@ export function useQueue(): QueueApi {
     socket.on("order:created", (order: BackendOrder) => {
       trace("order:created", order);
       socketMissesRef.current = 0; // the room is delivering
-      calibrate(parseServerTime(order.createdAt));
       const item = toItem(order);
       if (!item) return;
       touchedRef.current.set(keyOf(item), Date.now());
@@ -537,7 +537,6 @@ export function useQueue(): QueueApi {
     socket.on("order:status-updated", (order: BackendOrder) => {
       trace("order:status-updated", order);
       socketMissesRef.current = 0; // the room is delivering
-      calibrate(parseServerTime(order.updatedAt));
       touchedRef.current.set(order.id, Date.now());
       const item = toItem(order);
       updateBoard((prev) => {
@@ -570,14 +569,30 @@ export function useQueue(): QueueApi {
       }
     };
 
-    const recoveryReload = (attempts: number) => {
+    let recoveryProbePending = false;
+    let lastRecoveryProbe = 0;
+    const recoveryReload = async (attempts: number) => {
+      if (recoveryProbePending || Date.now() - lastRecoveryProbe < 30_000) return;
+      recoveryProbePending = true;
+      lastRecoveryProbe = Date.now();
       try {
-        sessionStorage.setItem(RELOAD_COUNT_KEY, String(attempts + 1));
+        // Plain LAN HTTP has no service-worker offline shell. Do not navigate
+        // away from a visible board into a browser error while the LAN is down.
+        await requestVoid(`/index.html?recovery=${Date.now()}`, {}, 5_000);
+        if (disposed || statusRef.current !== "offline" || isReloadBlocked() ||
+          Date.now() - lastInputRef.current < RECENT_INPUT_MS) return;
+        try {
+          sessionStorage.setItem(RELOAD_COUNT_KEY, String(attempts + 1));
+        } catch {
+          /* private mode — reload without the backoff memory */
+        }
+        warn(`unreachable for too long — reloading (recovery attempt ${attempts + 1})`);
+        window.location.reload();
       } catch {
-        /* private mode — reload without the backoff memory */
+        // Keep the visible board and retry while the frontend is unreachable.
+      } finally {
+        recoveryProbePending = false;
       }
-      warn(`unreachable for too long — reloading (recovery attempt ${attempts + 1})`);
-      window.location.reload();
     };
 
     const tick = () => {
@@ -603,19 +618,35 @@ export function useQueue(): QueueApi {
       // power-cycle the device. Backs off so a genuinely dead server doesn't turn
       // into a reload loop, and never interrupts someone mid-entry.
       if (statusRef.current !== "offline") return;
-      if (now - lastInputRef.current < RECENT_INPUT_MS) return;
+      if (now - lastInputRef.current < RECENT_INPUT_MS || isReloadBlocked()) return;
       const deadFor = now - Math.max(lastSyncOkRef.current, mountedAtRef.current);
       const attempts = readReloadCount();
-      if (deadFor > RECOVERY_RELOAD_MS * Math.min(attempts + 1, 6)) recoveryReload(attempts);
+      if (deadFor > RECOVERY_RELOAD_MS * Math.min(attempts + 1, 6)) void recoveryReload(attempts);
     };
 
     const watchdog = window.setInterval(tick, WATCHDOG_INTERVAL_MS);
 
     // Asking for the time keeps the clock fresh and gives the server a reason to
     // send us something, which in turn feeds the liveness check.
-    const timeResync = window.setInterval(() => {
-      if (socket.connected) socket.emit("time:request");
-    }, 60_000);
+    let timeRequestPending = false;
+    const syncTime = () => {
+      if (socket.connected) {
+        socket.emit("time:request");
+        return;
+      }
+      // LAN HTTP fallback: a cold boot with a broken socket must still learn
+      // the mini PC's time. This endpoint already returns an explicit `now`.
+      if (timeRequestPending) return;
+      timeRequestPending = true;
+      void requestJson<{ now?: number }>(`${API_URL}/api/v1/health`)
+        .then((health) => {
+          if (!disposed && typeof health?.now === "number") calibrate(health.now);
+        })
+        .catch(() => { /* retain the last calibration while unreachable */ })
+        .finally(() => { timeRequestPending = false; });
+    };
+    const timeResync = window.setInterval(syncTime, 60_000);
+    syncTime();
 
     /* ---- Wake-up hooks ---------------------------------------------------
      * Timers are throttled hard in a backgrounded Android WebView, so when the
@@ -871,7 +902,8 @@ export function useQueue(): QueueApi {
 
   const setChime = useCallback((on: boolean) => {
     setChimeEnabled(on);
-    localStorage.setItem(CHIME_KEY, String(on));
+    try { localStorage.setItem(CHIME_KEY, String(on)); }
+    catch { /* keep the in-memory preference when storage is unavailable */ }
   }, []);
 
   const requestChime = useCallback(() => {

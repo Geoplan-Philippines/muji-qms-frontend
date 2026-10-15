@@ -6,15 +6,14 @@ import { useEffect, useState } from "react";
  * `offsetMs` is added to the device clock so the returned time tracks a trusted
  * source (the LAN server) even when the device's own clock is wrong. This is how
  * the TV display mirrors the Mini PC's time without any internet/NTP: the offset
- * is learned from the server over the socket (see `useQueue().clockOffset`).
+ * is learned over the LAN socket or HTTP (see `useQueue().clockOffset`).
  * Defaults to 0 (raw device clock).
  */
 export function useClock(intervalMs = 1000, offsetMs = 0): Date {
-  const [now, setNow] = useState(() => new Date(Date.now() + offsetMs));
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    setNow(new Date(Date.now() + offsetMs)); // re-sync immediately when offset changes
-    const id = setInterval(() => setNow(new Date(Date.now() + offsetMs)), intervalMs);
+    const id = setInterval(() => setNow(Date.now()), intervalMs);
     return () => clearInterval(id);
-  }, [intervalMs, offsetMs]);
-  return now;
+  }, [intervalMs]);
+  return new Date(now + offsetMs);
 }
